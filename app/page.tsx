@@ -23,7 +23,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type StatusTone = "error" | "warning" | "info" | "success";
 type PlaybackState = "idle" | "playing" | "countdown" | "blocked";
-const COUNTDOWN_SECONDS = 5;
+const PAUSE_SECONDS_STORAGE_KEY = "sl_pauseSeconds_v1";
+const DEFAULT_PAUSE_SECONDS = 3;
 const YT_STATE_PLAYING = 1;
 const YT_STATE_BUFFERING = 3;
 
@@ -43,6 +44,8 @@ export default function Home() {
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [countdownRemaining, setCountdownRemaining] = useState(0);
   const [pendingIndex, setPendingIndex] = useState<number | null>(null);
+  const [pauseSeconds, setPauseSeconds] = useState(DEFAULT_PAUSE_SECONDS);
+  const [pauseInput, setPauseInput] = useState(String(DEFAULT_PAUSE_SECONDS));
   const [sessionUnplayable, setSessionUnplayable] = useState<Set<string>>(() => new Set());
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusTone, setStatusTone] = useState<StatusTone>("info");
@@ -96,6 +99,23 @@ export default function Home() {
       setStatusTone("warning");
       setStatusMessage("Set List draft data was reset because it was corrupted.");
     }
+
+    if (typeof window !== "undefined") {
+      const storedPauseSeconds = window.localStorage.getItem(PAUSE_SECONDS_STORAGE_KEY);
+      const parsedPauseSeconds = Number(storedPauseSeconds);
+
+      if (
+        Number.isInteger(parsedPauseSeconds) &&
+        parsedPauseSeconds >= 1 &&
+        parsedPauseSeconds <= 9
+      ) {
+        setPauseSeconds(parsedPauseSeconds);
+        setPauseInput(String(parsedPauseSeconds));
+      } else {
+        setPauseSeconds(DEFAULT_PAUSE_SECONDS);
+        setPauseInput(String(DEFAULT_PAUSE_SECONDS));
+      }
+    }
   }, []);
 
   const songsById = useMemo(
@@ -103,36 +123,6 @@ export default function Home() {
       Object.fromEntries(savedSongs.map((song) => [song.videoId, song])),
     [savedSongs]
   );
-  const loadedSet = useMemo(
-    () => savedSetLists.find((list) => list.id === loadedSetId) ?? null,
-    [loadedSetId, savedSetLists]
-  );
-  const isDirty = useMemo(() => {
-    if (!loadedSet) {
-      return false;
-    }
-
-    const currentVideoIds = setListItems.map((item) => item.videoId);
-    const loadedVideoIds = loadedSet.items.map((item) => item.videoId);
-
-    if (currentVideoIds.length !== loadedVideoIds.length) {
-      return true;
-    }
-
-    return currentVideoIds.some((videoId, index) => videoId !== loadedVideoIds[index]);
-  }, [loadedSet, setListItems]);
-  const setListStatusLabel = useMemo(() => {
-    if (!loadedSet) {
-      return <span>Draft (unsaved)</span>;
-    }
-
-    return (
-      <span>
-        Loaded: <span className="text-text0">{loadedSet.name}</span>
-        {isDirty ? <span className="text-accent"> {" "}• Modified</span> : null}
-      </span>
-    );
-  }, [isDirty, loadedSet]);
 
   useEffect(() => {
     setListItemsRef.current = setListItems;
@@ -537,6 +527,23 @@ export default function Home() {
     return songsById[item.videoId]?.title ?? "Missing video";
   }, [pendingIndex, setListItems, songsById]);
 
+  const commitPauseInput = () => {
+    const trimmed = pauseInput.trim();
+    const parsed = Number(trimmed);
+
+    if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 9) {
+      setPauseSeconds(parsed);
+      setPauseInput(String(parsed));
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(PAUSE_SECONDS_STORAGE_KEY, String(parsed));
+      }
+      return;
+    }
+
+    setPauseInput(String(pauseSeconds));
+  };
+
   function clearPlaybackTimers() {
     if (countdownIntervalRef.current !== null && typeof window !== "undefined") {
       window.clearInterval(countdownIntervalRef.current);
@@ -580,7 +587,7 @@ export default function Home() {
     clearPlaybackTimers();
     setPlaybackState("countdown");
     setPendingIndex(nextIndex);
-    setCountdownRemaining(COUNTDOWN_SECONDS);
+    setCountdownRemaining(pauseSeconds);
 
     if (typeof window === "undefined") {
       return;
@@ -744,14 +751,6 @@ export default function Home() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => stopPlayback()}
-                    disabled={playbackState === "idle"}
-                    className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-text0 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Stop
-                  </button>
-                  <button
-                    type="button"
                     onClick={handleSaveSetList}
                     className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-accent/40 bg-accent/12 px-4 py-2 text-sm font-semibold text-accent transition hover:bg-accent/18"
                   >
@@ -763,8 +762,29 @@ export default function Home() {
                     onLoad={handleLoadSavedSetList}
                     onDelete={handleDeleteSavedSetList}
                   />
+                  <label className="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-text1">
+                    <span>Pause (sec)</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[1-9]"
+                      maxLength={1}
+                      value={pauseInput}
+                      onChange={(event) => {
+                        const nextValue = event.target.value.replace(/[^1-9]/g, "");
+                        setPauseInput(nextValue);
+                      }}
+                      onBlur={commitPauseInput}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          commitPauseInput();
+                        }
+                      }}
+                      className="w-[2ch] min-w-[2ch] bg-transparent text-center font-semibold text-text0 outline-none"
+                      aria-label="Pause in seconds"
+                    />
+                  </label>
                 </div>
-                <div className="text-sm text-text1 md:text-right">{setListStatusLabel}</div>
               </div>
             </div>
 
