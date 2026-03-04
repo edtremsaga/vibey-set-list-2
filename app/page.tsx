@@ -34,6 +34,7 @@ const USER_PLAYBACK_CHECK_DELAY_MS = 1500;
 
 export default function Home() {
   const playerControllerRef = useRef<YouTubePlayerHandle | null>(null);
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [debouncedInput, setDebouncedInput] = useState("");
   const [loadedVideoId, setLoadedVideoId] = useState<string | null>(null);
@@ -717,6 +718,7 @@ export default function Home() {
               </label>
               <div className="relative">
                 <input
+                  ref={urlInputRef}
                   id="youtube-url"
                   type="text"
                   value={inputValue}
@@ -734,6 +736,10 @@ export default function Home() {
                     onClick={() => {
                       setInputValue("");
                       setDebouncedInput("");
+                      window.requestAnimationFrame(() => {
+                        urlInputRef.current?.focus();
+                        urlInputRef.current?.setSelectionRange(0, 0);
+                      });
                     }}
                     className="absolute right-3 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm text-text1 transition hover:border-white/20 hover:text-text0"
                     aria-label="Clear YouTube URL input"
