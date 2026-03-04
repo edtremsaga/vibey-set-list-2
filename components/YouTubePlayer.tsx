@@ -63,6 +63,7 @@ type YouTubePlayerProps = {
   onEmbedError(message: string | null): void;
   onEnded(): void;
   onError(code: number): void;
+  onStateChange(state: number): void;
 };
 
 export type YouTubePlayerHandle = {
@@ -79,7 +80,7 @@ type PendingAction =
   | null;
 
 const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>(function YouTubePlayer(
-  { videoId, onEmbedError, onEnded, onError },
+  { videoId, onEmbedError, onEnded, onError, onStateChange },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -90,6 +91,7 @@ const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>(functi
   const onEmbedErrorRef = useRef(onEmbedError);
   const onEndedRef = useRef(onEnded);
   const onErrorRef = useRef(onError);
+  const onStateChangeRef = useRef(onStateChange);
 
   useEffect(() => {
     onEmbedErrorRef.current = onEmbedError;
@@ -102,6 +104,10 @@ const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>(functi
   useEffect(() => {
     onErrorRef.current = onError;
   }, [onError]);
+
+  useEffect(() => {
+    onStateChangeRef.current = onStateChange;
+  }, [onStateChange]);
 
   const cuePreview = useCallback(
     (nextVideoId: string | null) => {
@@ -212,6 +218,7 @@ const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>(functi
               }
             },
             onStateChange: (event) => {
+              onStateChangeRef.current(event.data);
               if (event.data === 0) {
                 onEndedRef.current();
               }

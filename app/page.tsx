@@ -617,6 +617,10 @@ export default function Home() {
     }
 
     playbackCheckTimeoutRef.current = window.setTimeout(() => {
+      if (playbackStateRef.current !== "playing" || playingIndexRef.current !== index) {
+        return;
+      }
+
       const playerState = playerControllerRef.current?.getPlayerState();
 
       if (playerState === YT_STATE_PLAYING) {
@@ -647,6 +651,19 @@ export default function Home() {
     playIndex(nextIndex, "user");
   };
 
+  const handlePlayerStateChange = (state: number) => {
+    if (state !== YT_STATE_PLAYING) {
+      return;
+    }
+
+    clearPlaybackTimers();
+
+    if (playbackStateRef.current === "blocked") {
+      setPlaybackState("playing");
+      setPendingIndex(null);
+    }
+  };
+
   const inlineMessage = playerError ?? errorMessage ?? statusMessage ?? "";
   const inlineMessageTone: StatusTone =
     playerError || errorMessage ? "error" : statusTone;
@@ -663,8 +680,7 @@ export default function Home() {
     <main className="min-h-screen bg-[linear-gradient(to_bottom,#0B0D12,#101522)] px-6 py-8 text-text0 md:px-10 lg:px-12 lg:py-6">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:gap-4 xl:max-w-[1500px]">
         <header className="space-y-1.5">
-          <p className="text-sm font-medium uppercase tracking-[0.24em] text-accent/80">Preview</p>
-          <h1 className="text-4xl font-semibold tracking-tight text-text0 md:text-5xl">Set List App</h1>
+          <h1 className="text-4xl font-semibold tracking-tight text-text0 md:text-5xl">Music Looper Set List</h1>
           <p className="max-w-2xl text-base leading-7 text-text1 md:text-lg">
             Paste a YouTube link or video ID and load a paused preview into the player.
           </p>
@@ -676,14 +692,33 @@ export default function Home() {
               <label htmlFor="youtube-url" className="block text-sm font-medium text-text0">
                 YouTube URL or video ID
               </label>
-              <input
-                id="youtube-url"
-                type="text"
-                value={inputValue}
-                onChange={(event) => setInputValue(event.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
-                className="min-h-13 w-full rounded-2xl border border-white/10 bg-bg2 px-4 py-3 text-base text-text0 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/25"
-              />
+              <div className="relative">
+                <input
+                  id="youtube-url"
+                  type="text"
+                  value={inputValue}
+                  onChange={(event) => setInputValue(event.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  className="min-h-13 w-full rounded-2xl border border-white/10 bg-bg2 px-4 py-3 pr-12 text-base text-text0 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/25"
+                />
+                {inputValue.trim() ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputValue("");
+                      setDebouncedInput("");
+                    }}
+                    className="absolute right-3 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm text-text1 transition hover:border-white/20 hover:text-text0"
+                    aria-label="Clear YouTube URL input"
+                  >
+                    ×
+                  </button>
+                ) : null}
+              </div>
               <button
                 type="button"
                 onClick={handleSearchClick}
@@ -716,6 +751,7 @@ export default function Home() {
                     onEmbedError={setPlayerError}
                     onEnded={handlePlaybackEnded}
                     onError={handlePlaybackError}
+                    onStateChange={handlePlayerStateChange}
                   />
                   {playbackState === "countdown" ? (
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/72 px-6 text-center">
