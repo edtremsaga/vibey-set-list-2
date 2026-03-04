@@ -1,9 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+} from "react";
+
+type PlayerStateChangeEvent = {
+  data: number;
+};
+
+type PlayerErrorEvent = {
+  data: number;
+};
 
 type YouTubePlayerInstance = {
   cueVideoById(videoId: string): void;
+  loadVideoById(videoId: string): void;
+  playVideo(): void;
+  stopVideo(): void;
+  getPlayerState(): number;
   destroy(): void;
 };
 
@@ -25,7 +43,8 @@ type YouTubeNamespace = {
       };
       events: {
         onReady: () => void;
-        onError: () => void;
+        onStateChange: (event: PlayerStateChangeEvent) => void;
+        onError: (event: PlayerErrorEvent) => void;
       };
     }
   ) => YouTubePlayerInstance;
@@ -42,17 +61,56 @@ declare global {
 type YouTubePlayerProps = {
   videoId: string | null;
   onEmbedError(message: string | null): void;
+  onEnded(): void;
+  onError(code: number): void;
 };
 
-export default function YouTubePlayer({ videoId, onEmbedError }: YouTubePlayerProps) {
+export type YouTubePlayerHandle = {
+  cue(videoId: string): void;
+  play(videoId: string): void;
+  stop(): void;
+  getPlayerState(): number | null;
+};
+
+type PendingAction =
+  | { type: "cue"; videoId: string }
+  | { type: "play"; videoId: string }
+  | { type: "stop" }
+  | null;
+
+const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>(function YouTubePlayer(
+  { videoId, onEmbedError, onEnded, onError },
+  ref
+) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YouTubePlayerInstance | null>(null);
   const isReadyRef = useRef(false);
   const loadedVideoIdRef = useRef<string | null>(null);
+  const pendingActionRef = useRef<PendingAction>(null);
+  const onEmbedErrorRef = useRef(onEmbedError);
+  const onEndedRef = useRef(onEnded);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    onEmbedErrorRef.current = onEmbedError;
+  }, [onEmbedError]);
+
+  useEffect(() => {
+    onEndedRef.current = onEnded;
+  }, [onEnded]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   const cuePreview = useCallback(
     (nextVideoId: string | null) => {
-      if (!nextVideoId || !playerRef.current || !isReadyRef.current) {
+      if (!nextVideoId) {
+        return;
+      }
+
+      if (!playerRef.current || !isReadyRef.current) {
+        pendingActionRef.current = { type: "cue", videoId: nextVideoId };
         return;
       }
 
@@ -60,11 +118,55 @@ export default function YouTubePlayer({ videoId, onEmbedError }: YouTubePlayerPr
         return;
       }
 
-      onEmbedError(null);
+      onEmbedErrorRef.current(null);
       playerRef.current.cueVideoById(nextVideoId);
       loadedVideoIdRef.current = nextVideoId;
+      pendingActionRef.current = null;
     },
-    [onEmbedError]
+    []
+  );
+
+  const playVideo = useCallback(
+    (nextVideoId: string) => {
+      if (!playerRef.current || !isReadyRef.current) {
+        pendingActionRef.current = { type: "play", videoId: nextVideoId };
+        return;
+      }
+
+      onEmbedErrorRef.current(null);
+      playerRef.current.loadVideoById(nextVideoId);
+      playerRef.current.playVideo();
+      loadedVideoIdRef.current = nextVideoId;
+      pendingActionRef.current = null;
+    },
+    []
+  );
+
+  const stopVideo = useCallback(() => {
+    if (!playerRef.current || !isReadyRef.current) {
+      pendingActionRef.current = { type: "stop" };
+      return;
+    }
+
+    playerRef.current.stopVideo();
+    pendingActionRef.current = null;
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      cue: cuePreview,
+      play: playVideo,
+      stop: stopVideo,
+      getPlayerState: () => {
+        if (!playerRef.current || !isReadyRef.current) {
+          return null;
+        }
+
+        return playerRef.current.getPlayerState();
+      },
+    }),
+    [cuePreview, playVideo, stopVideo]
   );
 
   useEffect(() => {
@@ -98,15 +200,30 @@ export default function YouTubePlayer({ videoId, onEmbedError }: YouTubePlayerPr
             onReady: () => {
               isReadyRef.current = true;
               loadedVideoIdRef.current = videoId;
-              onEmbedError(null);
+              onEmbedErrorRef.current(null);
+
+              const pendingAction = pendingActionRef.current;
+              if (pendingAction?.type === "play") {
+                playVideo(pendingAction.videoId);
+              } else if (pendingAction?.type === "cue") {
+                cuePreview(pendingAction.videoId);
+              } else if (pendingAction?.type === "stop") {
+                stopVideo();
+              }
             },
-            onError: () => {
-              onEmbedError("This video cannot be embedded.");
+            onStateChange: (event) => {
+              if (event.data === 0) {
+                onEndedRef.current();
+              }
+            },
+            onError: (event) => {
+              onEmbedErrorRef.current("This video cannot be embedded.");
+              onErrorRef.current(event.data);
             },
           },
         });
       } catch {
-        onEmbedError("The YouTube player failed to load.");
+        onEmbedErrorRef.current("The YouTube player failed to load.");
       }
     };
 
@@ -115,7 +232,7 @@ export default function YouTubePlayer({ videoId, onEmbedError }: YouTubePlayerPr
     return () => {
       cancelled = true;
     };
-  }, [onEmbedError, videoId]);
+  }, [cuePreview, playVideo, stopVideo, videoId]);
 
   useEffect(() => {
     cuePreview(videoId);
@@ -127,6 +244,7 @@ export default function YouTubePlayer({ videoId, onEmbedError }: YouTubePlayerPr
       playerRef.current = null;
       isReadyRef.current = false;
       loadedVideoIdRef.current = null;
+      pendingActionRef.current = null;
     };
   }, []);
 
@@ -135,7 +253,9 @@ export default function YouTubePlayer({ videoId, onEmbedError }: YouTubePlayerPr
       <div ref={containerRef} className="h-full w-full" />
     </div>
   );
-}
+});
+
+export default YouTubePlayer;
 
 function loadYouTubeIframeApi(): Promise<YouTubeNamespace> {
   if (typeof window === "undefined") {

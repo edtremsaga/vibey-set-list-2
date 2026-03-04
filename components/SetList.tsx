@@ -1,12 +1,19 @@
 "use client";
 
 import type { SavedSong, SetListItem } from "@/lib/storage";
+import type { ReactNode } from "react";
 
 type SetListProps = {
   items: SetListItem[];
   songsById: Record<string, SavedSong>;
   selectedItemId: string | null;
+  playingIndex: number | null;
+  isPlaying: boolean;
+  statusLabel: ReactNode;
   onSaveSetList(): void;
+  onPlaySetList(): void;
+  onStopPlayback(): void;
+  savedSetListsControl: ReactNode;
   onSelect(itemId: string): void;
   onRemove(itemId: string): void;
   onMoveUp(itemId: string): void;
@@ -17,7 +24,13 @@ export default function SetList({
   items,
   songsById,
   selectedItemId,
+  playingIndex,
+  isPlaying,
+  statusLabel,
   onSaveSetList,
+  onPlaySetList,
+  onStopPlayback,
+  savedSetListsControl,
   onSelect,
   onRemove,
   onMoveUp,
@@ -29,6 +42,7 @@ export default function SetList({
         <div>
           <h2 className="text-lg font-semibold text-text0">Set List</h2>
           <p className="text-sm text-text1">Build an ordered draft from your saved songs.</p>
+          <div className="mt-1 text-xs text-text1">{statusLabel}</div>
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-text1">
@@ -36,11 +50,27 @@ export default function SetList({
           </span>
           <button
             type="button"
+            onClick={onPlaySetList}
+            className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/18"
+          >
+            Play Set List
+          </button>
+          <button
+            type="button"
             onClick={onSaveSetList}
             className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-accent/40 bg-accent/12 px-4 py-2 text-sm font-semibold text-accent transition hover:bg-accent/18"
           >
             Save Set List
           </button>
+          <button
+            type="button"
+            onClick={onStopPlayback}
+            disabled={!isPlaying}
+            className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-text0 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Stop
+          </button>
+          {savedSetListsControl}
         </div>
       </div>
 
@@ -54,6 +84,7 @@ export default function SetList({
             const song = songsById[item.videoId];
             const isSelected = selectedItemId === item.id;
             const isMissing = !song;
+            const isPlayingRow = playingIndex === index;
 
             return (
               <div
@@ -70,12 +101,22 @@ export default function SetList({
                 className={`flex items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${
                   isSelected
                     ? "border-accent/50 bg-accent/12 shadow-[inset_4px_0_0_0_#3B82F6]"
+                    : isPlayingRow
+                      ? "border-accent/35 bg-accent/8"
                     : isMissing
                       ? "border-white/8 bg-bg0/40 text-text1/70"
                       : "border-white/8 bg-bg0/55 hover:border-accent/30 hover:bg-white/[0.03]"
                 }`}
               >
                 <span className="w-6 shrink-0 text-center text-sm font-semibold text-text1">{index + 1}</span>
+                {isPlayingRow ? (
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
+                    aria-label="Currently playing"
+                  />
+                ) : (
+                  <span className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+                )}
 
                 {song ? (
                   // eslint-disable-next-line @next/next/no-img-element

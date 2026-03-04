@@ -3,7 +3,7 @@
 import SavedSongs from "@/components/SavedSongs";
 import SavedSetLists from "@/components/SavedSetLists";
 import SetList from "@/components/SetList";
-import YouTubePlayer from "@/components/YouTubePlayer";
+import YouTubePlayer, { type YouTubePlayerHandle } from "@/components/YouTubePlayer";
 import {
   consumeSavedSetListsCorruptionFlag,
   consumeSetListDraftCorruptionFlag,
@@ -19,22 +19,41 @@ import {
   type SetListItem,
 } from "@/lib/storage";
 import { buildYouTubeSearchUrl, parseYouTubeVideoId } from "@/lib/youtube";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type StatusTone = "error" | "warning" | "info" | "success";
+type PlaybackState = "idle" | "playing" | "countdown" | "blocked";
+const COUNTDOWN_SECONDS = 5;
+const YT_STATE_PLAYING = 1;
+const YT_STATE_BUFFERING = 3;
 
 export default function Home() {
+  const playerControllerRef = useRef<YouTubePlayerHandle | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [debouncedInput, setDebouncedInput] = useState("");
   const [loadedVideoId, setLoadedVideoId] = useState<string | null>(null);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [savedSongs, setSavedSongs] = useState<SavedSong[]>([]);
   const [savedSetLists, setSavedSetLists] = useState<SavedSetList[]>([]);
+  const [loadedSetId, setLoadedSetId] = useState<string | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [setListItems, setSetListItems] = useState<SetListItem[]>([]);
   const [selectedSetListItemId, setSelectedSetListItemId] = useState<string | null>(null);
+  const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null);
+  const [countdownRemaining, setCountdownRemaining] = useState(0);
+  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
+  const [sessionUnplayable, setSessionUnplayable] = useState<Set<string>>(() => new Set());
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusTone, setStatusTone] = useState<StatusTone>("info");
+  const setListItemsRef = useRef<SetListItem[]>([]);
+  const songsByIdRef = useRef<Record<string, SavedSong>>({});
+  const playingIndexRef = useRef<number | null>(null);
+  const pendingIndexRef = useRef<number | null>(null);
+  const playbackStateRef = useRef<PlaybackState>("idle");
+  const sessionUnplayableRef = useRef<Set<string>>(new Set());
+  const countdownIntervalRef = useRef<number | null>(null);
+  const playbackCheckTimeoutRef = useRef<number | null>(null);
 
   const parsedVideoId = useMemo(() => parseYouTubeVideoId(debouncedInput), [debouncedInput]);
   const errorMessage = useMemo(() => {
@@ -84,6 +103,66 @@ export default function Home() {
       Object.fromEntries(savedSongs.map((song) => [song.videoId, song])),
     [savedSongs]
   );
+  const loadedSet = useMemo(
+    () => savedSetLists.find((list) => list.id === loadedSetId) ?? null,
+    [loadedSetId, savedSetLists]
+  );
+  const isDirty = useMemo(() => {
+    if (!loadedSet) {
+      return false;
+    }
+
+    const currentVideoIds = setListItems.map((item) => item.videoId);
+    const loadedVideoIds = loadedSet.items.map((item) => item.videoId);
+
+    if (currentVideoIds.length !== loadedVideoIds.length) {
+      return true;
+    }
+
+    return currentVideoIds.some((videoId, index) => videoId !== loadedVideoIds[index]);
+  }, [loadedSet, setListItems]);
+  const setListStatusLabel = useMemo(() => {
+    if (!loadedSet) {
+      return <span>Draft (unsaved)</span>;
+    }
+
+    return (
+      <span>
+        Loaded: <span className="text-text0">{loadedSet.name}</span>
+        {isDirty ? <span className="text-accent"> {" "}• Modified</span> : null}
+      </span>
+    );
+  }, [isDirty, loadedSet]);
+
+  useEffect(() => {
+    setListItemsRef.current = setListItems;
+  }, [setListItems]);
+
+  useEffect(() => {
+    songsByIdRef.current = songsById;
+  }, [songsById]);
+
+  useEffect(() => {
+    playingIndexRef.current = playingIndex;
+  }, [playingIndex]);
+
+  useEffect(() => {
+    pendingIndexRef.current = pendingIndex;
+  }, [pendingIndex]);
+
+  useEffect(() => {
+    playbackStateRef.current = playbackState;
+  }, [playbackState]);
+
+  useEffect(() => {
+    sessionUnplayableRef.current = sessionUnplayable;
+  }, [sessionUnplayable]);
+
+  useEffect(() => {
+    return () => {
+      clearPlaybackTimers();
+    };
+  }, []);
 
   const handleSearchClick = () => {
     const searchUrl = buildYouTubeSearchUrl(inputValue);
@@ -157,6 +236,63 @@ export default function Home() {
     setPlayerError(null);
   };
 
+  const stopPlayback = (clearPreviewErrors = false) => {
+    clearPlaybackTimers();
+    playerControllerRef.current?.stop();
+    setPlaybackState("idle");
+    setPlayingIndex(null);
+    setCountdownRemaining(0);
+    setPendingIndex(null);
+    const nextUnplayable = new Set<string>();
+    sessionUnplayableRef.current = nextUnplayable;
+    setSessionUnplayable(nextUnplayable);
+    if (clearPreviewErrors) {
+      setPlayerError(null);
+    }
+  };
+
+  const playIndex = (startIndex: number) => {
+    const currentItems = setListItemsRef.current;
+    const currentSongsById = songsByIdRef.current;
+    const unplayable = sessionUnplayableRef.current;
+
+    for (let index = startIndex; index < currentItems.length; index += 1) {
+      const item = currentItems[index];
+      if (!item) {
+        break;
+      }
+
+      if (unplayable.has(item.videoId) || !currentSongsById[item.videoId]) {
+        continue;
+      }
+
+      clearPlaybackTimers();
+      setPlaybackState("playing");
+      setPlayingIndex(index);
+      setPendingIndex(null);
+      setCountdownRemaining(0);
+      setLoadedVideoId(item.videoId);
+      setInputValue(`https://www.youtube.com/watch?v=${item.videoId}`);
+      setDebouncedInput(`https://www.youtube.com/watch?v=${item.videoId}`);
+      setPlayerError(null);
+      playerControllerRef.current?.play(item.videoId);
+      schedulePlaybackCheck(index, 350, 0);
+      return;
+    }
+
+    stopPlayback(true);
+  };
+
+  const startPlayback = (startIndex: number) => {
+    if (setListItemsRef.current.length === 0) {
+      setStatusTone("error");
+      setStatusMessage("Add songs to your set list.");
+      return;
+    }
+
+    playIndex(startIndex);
+  };
+
   const handleDeleteSavedSong = (videoId: string) => {
     const nextSongs = savedSongs.filter((song) => song.videoId !== videoId);
     setSavedSongs(nextSongs);
@@ -178,6 +314,23 @@ export default function Home() {
       saveSetListDraft(nextItems);
       return nextItems;
     });
+  };
+
+  const handlePlaySetList = () => {
+    if (setListItems.length === 0) {
+      setStatusTone("error");
+      setStatusMessage("Add songs to your set list.");
+      return;
+    }
+
+    const nextUnplayable = new Set<string>();
+    sessionUnplayableRef.current = nextUnplayable;
+    setSessionUnplayable(nextUnplayable);
+    const selectedIndex = selectedSetListItemId
+      ? setListItems.findIndex((item) => item.id === selectedSetListItemId)
+      : -1;
+    const startIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    startPlayback(startIndex);
   };
 
   const handleSaveSetList = () => {
@@ -226,6 +379,7 @@ export default function Home() {
       );
 
       setSavedSetLists(nextLists);
+      setLoadedSetId(existing.id);
       saveSavedSetLists(nextLists);
       setStatusTone("success");
       setStatusMessage(`Overwrote '${trimmedName}'.`);
@@ -243,6 +397,7 @@ export default function Home() {
     ]);
 
     setSavedSetLists(nextLists);
+    setLoadedSetId(nextLists[0]?.id ?? null);
     saveSavedSetLists(nextLists);
     setStatusTone("success");
     setStatusMessage(`Saved '${trimmedName}'.`);
@@ -258,7 +413,13 @@ export default function Home() {
     setSelectedVideoId(null);
 
     const song = songsById[item.videoId];
-    if (!song) {
+    if (!song && playbackState === "idle") {
+      return;
+    }
+
+    const itemIndex = setListItems.findIndex((entry) => entry.id === itemId);
+    if (playbackState !== "idle") {
+      playIndex(itemIndex);
       return;
     }
 
@@ -304,6 +465,7 @@ export default function Home() {
     }
 
     setSetListItems(list.items);
+    setLoadedSetId(id);
     saveSetListDraft(list.items);
     setSelectedSetListItemId(null);
     setSelectedVideoId(null);
@@ -315,6 +477,160 @@ export default function Home() {
     const nextLists = savedSetLists.filter((list) => list.id !== id);
     setSavedSetLists(nextLists);
     saveSavedSetLists(nextLists);
+
+     if (loadedSetId === id) {
+      setLoadedSetId(null);
+    }
+  };
+
+  const handlePlaybackEnded = () => {
+    if (playbackStateRef.current !== "playing") {
+      return;
+    }
+
+    const currentIndex = playingIndexRef.current;
+    if (currentIndex === null) {
+      stopPlayback(true);
+      return;
+    }
+
+    queueNextPlayableFrom(currentIndex + 1);
+  };
+
+  const handlePlaybackError = () => {
+    if (playbackStateRef.current !== "playing" && playbackStateRef.current !== "blocked") {
+      return;
+    }
+
+    const currentIndex = pendingIndexRef.current ?? playingIndexRef.current;
+    if (currentIndex === null) {
+      stopPlayback();
+      return;
+    }
+
+    const currentItem = setListItemsRef.current[currentIndex];
+    if (!currentItem) {
+      stopPlayback();
+      return;
+    }
+
+    setSessionUnplayable((current) => {
+      const next = new Set(current);
+      next.add(currentItem.videoId);
+      sessionUnplayableRef.current = next;
+      return next;
+    });
+
+    queueNextPlayableFrom(currentIndex + 1);
+  };
+
+  const pendingSongTitle = useMemo(() => {
+    if (pendingIndex === null) {
+      return null;
+    }
+
+    const item = setListItems[pendingIndex];
+    if (!item) {
+      return null;
+    }
+
+    return songsById[item.videoId]?.title ?? "Missing video";
+  }, [pendingIndex, setListItems, songsById]);
+
+  function clearPlaybackTimers() {
+    if (countdownIntervalRef.current !== null && typeof window !== "undefined") {
+      window.clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+
+    if (playbackCheckTimeoutRef.current !== null && typeof window !== "undefined") {
+      window.clearTimeout(playbackCheckTimeoutRef.current);
+      playbackCheckTimeoutRef.current = null;
+    }
+  }
+
+  function getNextPlayableIndex(startIndex: number): number | null {
+    const currentItems = setListItemsRef.current;
+    const currentSongsById = songsByIdRef.current;
+    const unplayable = sessionUnplayableRef.current;
+
+    for (let index = startIndex; index < currentItems.length; index += 1) {
+      const item = currentItems[index];
+      if (!item) {
+        break;
+      }
+
+      if (unplayable.has(item.videoId) || !currentSongsById[item.videoId]) {
+        continue;
+      }
+
+      return index;
+    }
+
+    return null;
+  }
+
+  function queueNextPlayableFrom(startIndex: number) {
+    const nextIndex = getNextPlayableIndex(startIndex);
+    if (nextIndex === null) {
+      stopPlayback(true);
+      return;
+    }
+
+    clearPlaybackTimers();
+    setPlaybackState("countdown");
+    setPendingIndex(nextIndex);
+    setCountdownRemaining(COUNTDOWN_SECONDS);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    countdownIntervalRef.current = window.setInterval(() => {
+      setCountdownRemaining((current) => {
+        if (current <= 1) {
+          clearPlaybackTimers();
+          const resolvedIndex = pendingIndexRef.current ?? nextIndex;
+          window.setTimeout(() => {
+            playIndex(resolvedIndex);
+          }, 0);
+          return 0;
+        }
+
+        return current - 1;
+      });
+    }, 1000);
+  }
+
+  function schedulePlaybackCheck(index: number, delayMs: number, attempt: 0 | 1) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    playbackCheckTimeoutRef.current = window.setTimeout(() => {
+      const playerState = playerControllerRef.current?.getPlayerState();
+
+      if (playerState === YT_STATE_PLAYING) {
+        return;
+      }
+
+      if (playerState === YT_STATE_BUFFERING && attempt === 0) {
+        schedulePlaybackCheck(index, 350, 1);
+        return;
+      }
+
+      setPlaybackState("blocked");
+      setPendingIndex(index);
+    }, delayMs);
+  }
+
+  const handleBlockedRetry = () => {
+    const nextIndex = pendingIndexRef.current;
+    if (nextIndex === null) {
+      return;
+    }
+
+    playIndex(nextIndex);
   };
 
   const inlineMessage = playerError ?? errorMessage ?? statusMessage ?? "";
@@ -378,7 +694,38 @@ export default function Home() {
 
           <div className="space-y-6">
             <div className="rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-5">
-              <YouTubePlayer videoId={loadedVideoId} onEmbedError={setPlayerError} />
+              <div className="relative">
+                <YouTubePlayer
+                  ref={playerControllerRef}
+                  videoId={loadedVideoId}
+                  onEmbedError={setPlayerError}
+                  onEnded={handlePlaybackEnded}
+                  onError={handlePlaybackError}
+                />
+                {playbackState === "countdown" ? (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/72 px-6 text-center">
+                    <p className="text-sm uppercase tracking-[0.18em] text-text1">Next up:</p>
+                    <p className="mt-2 max-w-md truncate text-lg font-semibold text-text0">
+                      {pendingSongTitle ?? "Loading next song"}
+                    </p>
+                    <p className="mt-4 text-5xl font-semibold tracking-tight text-accent">
+                      {countdownRemaining}
+                    </p>
+                  </div>
+                ) : null}
+                {playbackState === "blocked" ? (
+                  <button
+                    type="button"
+                    onClick={handleBlockedRetry}
+                    className="absolute inset-0 z-10 flex cursor-pointer flex-col items-center justify-center bg-black/72 px-6 text-center"
+                  >
+                    <p className="text-2xl font-semibold text-text0">Tap to continue</p>
+                    <p className="mt-2 text-sm text-text1">
+                      Autoplay is blocked until you tap.
+                    </p>
+                  </button>
+                ) : null}
+              </div>
               <div className="mt-4 flex items-center justify-between gap-3 text-sm text-text1">
                 <span>Player preview</span>
                 <span>{loadedVideoId ? `Video ID: ${loadedVideoId}` : "Waiting for a valid URL"}</span>
@@ -397,17 +744,24 @@ export default function Home() {
               items={setListItems}
               songsById={songsById}
               selectedItemId={selectedSetListItemId}
+              playingIndex={playingIndex}
+              isPlaying={playbackState !== "idle"}
+              statusLabel={setListStatusLabel}
+              onPlaySetList={handlePlaySetList}
               onSaveSetList={handleSaveSetList}
+              onStopPlayback={() => stopPlayback()}
+              savedSetListsControl={
+                <SavedSetLists
+                  lists={savedSetLists}
+                  loadedSetId={loadedSetId}
+                  onLoad={handleLoadSavedSetList}
+                  onDelete={handleDeleteSavedSetList}
+                />
+              }
               onSelect={handleSelectSetListItem}
               onRemove={handleRemoveSetListItem}
               onMoveUp={(itemId) => moveSetListItem(itemId, -1)}
               onMoveDown={(itemId) => moveSetListItem(itemId, 1)}
-            />
-
-            <SavedSetLists
-              lists={savedSetLists}
-              onLoad={handleLoadSavedSetList}
-              onDelete={handleDeleteSavedSetList}
             />
           </div>
         </section>
