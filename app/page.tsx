@@ -1,6 +1,7 @@
 "use client";
 
 import SavedSongs from "@/components/SavedSongs";
+import HelpModal from "@/components/HelpModal";
 import SavedSetLists from "@/components/SavedSetLists";
 import SetList from "@/components/SetList";
 import YouTubePlayer, { type YouTubePlayerHandle } from "@/components/YouTubePlayer";
@@ -53,6 +54,7 @@ export default function Home() {
   const [sessionUnplayable, setSessionUnplayable] = useState<Set<string>>(() => new Set());
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusTone, setStatusTone] = useState<StatusTone>("info");
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const setListItemsRef = useRef<SetListItem[]>([]);
   const songsByIdRef = useRef<Record<string, SavedSong>>({});
   const playingIndexRef = useRef<number | null>(null);
@@ -828,6 +830,13 @@ export default function Home() {
                     onLoad={handleLoadSavedSetList}
                     onDelete={handleDeleteSavedSetList}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setIsHelpOpen(true)}
+                    className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-text0 transition hover:border-accent/30 hover:bg-white/[0.08]"
+                  >
+                    Help
+                  </button>
                   <label className="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-text1">
                     <span>Pause (sec)</span>
                     <input
@@ -888,6 +897,7 @@ export default function Home() {
           </div>
         </section>
       </div>
+      <HelpModal open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </main>
   );
 }
