@@ -23,10 +23,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type StatusTone = "error" | "warning" | "info" | "success";
 type PlaybackState = "idle" | "playing" | "countdown" | "blocked";
+type PlaybackIntent = "user" | "auto";
 const PAUSE_SECONDS_STORAGE_KEY = "sl_pauseSeconds_v1";
 const DEFAULT_PAUSE_SECONDS = 3;
 const YT_STATE_PLAYING = 1;
 const YT_STATE_BUFFERING = 3;
+const AUTO_PLAYBACK_CHECK_DELAY_MS = 350;
+const USER_PLAYBACK_CHECK_DELAY_MS = 1500;
 
 export default function Home() {
   const playerControllerRef = useRef<YouTubePlayerHandle | null>(null);
@@ -241,7 +244,7 @@ export default function Home() {
     }
   };
 
-  const playIndex = (startIndex: number) => {
+  const playIndex = (startIndex: number, intent: PlaybackIntent) => {
     const currentItems = setListItemsRef.current;
     const currentSongsById = songsByIdRef.current;
     const unplayable = sessionUnplayableRef.current;
@@ -266,21 +269,26 @@ export default function Home() {
       setDebouncedInput(`https://www.youtube.com/watch?v=${item.videoId}`);
       setPlayerError(null);
       playerControllerRef.current?.play(item.videoId);
-      schedulePlaybackCheck(index, 350, 0);
+      schedulePlaybackCheck(
+        index,
+        intent,
+        intent === "user" ? USER_PLAYBACK_CHECK_DELAY_MS : AUTO_PLAYBACK_CHECK_DELAY_MS,
+        0
+      );
       return;
     }
 
     stopPlayback(true);
   };
 
-  const startPlayback = (startIndex: number) => {
+  const startPlayback = (startIndex: number, intent: PlaybackIntent) => {
     if (setListItemsRef.current.length === 0) {
       setStatusTone("error");
       setStatusMessage("Add songs to your set list.");
       return;
     }
 
-    playIndex(startIndex);
+    playIndex(startIndex, intent);
   };
 
   const handleDeleteSavedSong = (videoId: string) => {
@@ -313,14 +321,15 @@ export default function Home() {
       return;
     }
 
+    if (playbackState !== "idle") {
+      stopPlayback(true);
+      return;
+    }
+
     const nextUnplayable = new Set<string>();
     sessionUnplayableRef.current = nextUnplayable;
     setSessionUnplayable(nextUnplayable);
-    const selectedIndex = selectedSetListItemId
-      ? setListItems.findIndex((item) => item.id === selectedSetListItemId)
-      : -1;
-    const startIndex = selectedIndex >= 0 ? selectedIndex : 0;
-    startPlayback(startIndex);
+    startPlayback(0, "user");
   };
 
   const handleSaveSetList = () => {
@@ -409,7 +418,7 @@ export default function Home() {
 
     const itemIndex = setListItems.findIndex((entry) => entry.id === itemId);
     if (playbackState !== "idle") {
-      playIndex(itemIndex);
+      playIndex(itemIndex, "user");
       return;
     }
 
@@ -587,7 +596,7 @@ export default function Home() {
           clearPlaybackTimers();
           const resolvedIndex = pendingIndexRef.current ?? nextIndex;
           window.setTimeout(() => {
-            playIndex(resolvedIndex);
+            playIndex(resolvedIndex, "auto");
           }, 0);
           return 0;
         }
@@ -597,7 +606,12 @@ export default function Home() {
     }, 1000);
   }
 
-  function schedulePlaybackCheck(index: number, delayMs: number, attempt: 0 | 1) {
+  function schedulePlaybackCheck(
+    index: number,
+    intent: PlaybackIntent,
+    delayMs: number,
+    attempt: 0 | 1
+  ) {
     if (typeof window === "undefined") {
       return;
     }
@@ -610,7 +624,12 @@ export default function Home() {
       }
 
       if (playerState === YT_STATE_BUFFERING && attempt === 0) {
-        schedulePlaybackCheck(index, 350, 1);
+        schedulePlaybackCheck(
+          index,
+          intent,
+          intent === "user" ? USER_PLAYBACK_CHECK_DELAY_MS : AUTO_PLAYBACK_CHECK_DELAY_MS,
+          1
+        );
         return;
       }
 
@@ -625,7 +644,7 @@ export default function Home() {
       return;
     }
 
-    playIndex(nextIndex);
+    playIndex(nextIndex, "user");
   };
 
   const inlineMessage = playerError ?? errorMessage ?? statusMessage ?? "";
@@ -735,7 +754,7 @@ export default function Home() {
                     onClick={handlePlaySetList}
                     className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/18"
                   >
-                    Play Set List
+                    {playbackState === "idle" ? "Play Set List" : "Stop Set List"}
                   </button>
                   <button
                     type="button"
