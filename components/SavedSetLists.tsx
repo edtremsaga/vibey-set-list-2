@@ -1,7 +1,7 @@
 "use client";
 
 import type { SavedSetList } from "@/lib/storage";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 type SavedSetListsProps = {
@@ -19,8 +19,21 @@ export default function SavedSetLists({
 }: SavedSetListsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [nameSortDirection, setNameSortDirection] = useState<"asc" | "desc">("asc");
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previousOverflowRef = useRef<string | null>(null);
+
+  const displayLists = useMemo(() => {
+    const sorted = [...lists].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+    );
+
+    if (nameSortDirection === "desc") {
+      sorted.reverse();
+    }
+
+    return sorted;
+  }, [lists, nameSortDirection]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -90,15 +103,29 @@ export default function SavedSetLists({
                     <h2 className="text-lg font-semibold text-text0">Saved Set Lists</h2>
                     <p className="text-sm text-text1">Load a saved snapshot into your draft.</p>
                   </div>
-                  <button
-                    ref={closeButtonRef}
-                    type="button"
-                    onClick={() => setIsOpen(false)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm text-text1 transition hover:border-white/20 hover:text-text0"
-                    aria-label="Close saved set lists"
-                  >
-                    ×
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNameSortDirection((current) =>
+                          current === "asc" ? "desc" : "asc",
+                        )
+                      }
+                      className="inline-flex min-h-9 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-text1 transition hover:border-white/20 hover:text-text0"
+                      aria-label={`Sort by name ${nameSortDirection === "asc" ? "descending" : "ascending"}`}
+                    >
+                      Sort: {nameSortDirection === "asc" ? "A→Z" : "Z→A"}
+                    </button>
+                    <button
+                      ref={closeButtonRef}
+                      type="button"
+                      onClick={() => setIsOpen(false)}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm text-text1 transition hover:border-white/20 hover:text-text0"
+                      aria-label="Close saved set lists"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
 
                 <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
@@ -107,7 +134,7 @@ export default function SavedSetLists({
                       No saved set lists yet.
                     </div>
                   ) : (
-                    lists.map((list) => (
+                    displayLists.map((list) => (
                       <div
                         key={list.id}
                         className={`flex items-center gap-3 rounded-2xl border px-3 py-3 ${
