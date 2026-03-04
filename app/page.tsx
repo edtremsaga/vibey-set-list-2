@@ -703,10 +703,15 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[linear-gradient(to_bottom,#0B0D12,#101522)] px-6 py-8 text-text0 md:px-10 lg:px-12 lg:py-6">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:gap-4 xl:max-w-[1500px]">
-        <header className="space-y-1.5">
-          <h1 className="text-4xl font-semibold tracking-tight text-text0 md:text-5xl">Music Looper Set List</h1>
+        <header className="space-y-1.5 border-b border-white/5 pb-4">
+          <h1 className="text-4xl font-semibold tracking-tight text-text0 md:text-5xl">
+            Music Looper Set List
+            <span className="ml-3 text-lg font-normal italic text-text1 md:text-2xl">
+              by Vibey Craft
+            </span>
+          </h1>
           <p className="max-w-2xl text-base leading-7 text-text1 md:text-lg">
-            Paste a YouTube link or video ID and load a paused preview into the player.
+            Paste a YouTube link or video ID to load a song.
           </p>
         </header>
 
@@ -819,7 +824,11 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={handlePlaySetList}
-                    className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/18"
+                    className={`inline-flex min-h-10 items-center justify-center rounded-2xl px-4 py-2 text-sm font-semibold text-white transition ${
+                      playbackState === "idle"
+                        ? "border border-green-500/40 bg-green-600 hover:bg-green-500"
+                        : "border border-red-500/40 bg-red-600 hover:bg-red-500"
+                    }`}
                   >
                     {playbackState === "idle" ? "Play Set List" : "Stop Set List"}
                   </button>

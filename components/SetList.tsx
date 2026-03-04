@@ -234,7 +234,7 @@ function SortableSetListRow({
           : isSelected
             ? "border-accent/50 bg-accent/12 shadow-[inset_4px_0_0_0_#3B82F6]"
             : isPlayingRow
-              ? "border-accent/35 bg-accent/8"
+              ? "border-green-500/30 bg-green-500/10 font-medium"
               : isMissing
                 ? "border-white/8 bg-bg0/40 text-text1/70"
                 : "border-white/8 bg-bg0/55 hover:border-accent/30 hover:bg-white/[0.03]"
@@ -254,15 +254,14 @@ function SortableSetListRow({
       >
         ≡
       </button>
+      <span
+        className={`w-4 shrink-0 text-center text-xs text-green-300 ${isPlayingRow ? "opacity-100" : "opacity-0"}`}
+        aria-label={isPlayingRow ? "Currently playing" : undefined}
+        aria-hidden={!isPlayingRow}
+      >
+        ▶
+      </span>
       <span className="w-5 shrink-0 text-center text-sm font-semibold text-text1">{index + 1}</span>
-      {isPlayingRow ? (
-        <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
-          aria-label="Currently playing"
-        />
-      ) : (
-        <span className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
-      )}
 
       {song ? (
         // eslint-disable-next-line @next/next/no-img-element
