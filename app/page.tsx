@@ -660,9 +660,9 @@ export default function Home() {
           : "text-red-300";
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(to_bottom,#0B0D12,#101522)] px-6 py-10 text-text0 md:px-10 lg:px-12">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 xl:max-w-[1500px]">
-        <header className="space-y-3">
+    <main className="min-h-screen bg-[linear-gradient(to_bottom,#0B0D12,#101522)] px-6 py-8 text-text0 md:px-10 lg:px-12 lg:py-6">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:gap-4 xl:max-w-[1500px]">
+        <header className="space-y-1.5">
           <p className="text-sm font-medium uppercase tracking-[0.24em] text-accent/80">Preview</p>
           <h1 className="text-4xl font-semibold tracking-tight text-text0 md:text-5xl">Set List App</h1>
           <p className="max-w-2xl text-base leading-7 text-text1 md:text-lg">
@@ -670,9 +670,9 @@ export default function Home() {
           </p>
         </header>
 
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
-          <div className="rounded-3xl border border-white/8 bg-bg1/90 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur">
-            <div className="space-y-4">
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
+          <div className="rounded-3xl border border-white/8 bg-bg1/90 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur lg:p-4">
+            <div className="space-y-3">
               <label htmlFor="youtube-url" className="block text-sm font-medium text-text0">
                 YouTube URL or video ID
               </label>
@@ -706,10 +706,10 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="w-full lg:max-w-[700px]">
-              <div className="rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-5">
-                <div className="relative">
+          <div className="space-y-4 lg:space-y-3">
+            <div className="w-full lg:max-w-[600px]">
+              <div className="rounded-3xl border border-white/8 bg-bg1/80 p-3.5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-4">
+                <div className="relative overflow-hidden rounded-2xl lg:max-h-[270px]">
                   <YouTubePlayer
                     ref={playerControllerRef}
                     videoId={loadedVideoId}
@@ -741,14 +741,14 @@ export default function Home() {
                     </button>
                   ) : null}
                 </div>
-                <div className="mt-4 flex items-center justify-between gap-3 text-sm text-text1">
+                <div className="mt-3 flex items-center justify-between gap-3 text-sm text-text1">
                   <span>Player preview</span>
                   <span>{loadedVideoId ? `Video ID: ${loadedVideoId}` : "Waiting for a valid URL"}</span>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-5">
+            <div className="rounded-3xl border border-white/8 bg-bg1/80 p-3.5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div className="flex flex-wrap items-center gap-2">
                   <button
