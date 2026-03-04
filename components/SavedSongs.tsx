@@ -73,7 +73,7 @@ export default function SavedSongs({
                     onSelect(song.videoId);
                   }
                 }}
-                className={`group relative flex items-center gap-3 overflow-visible rounded-2xl border px-3 py-3 text-left transition ${
+                className={`group relative flex items-center gap-2 overflow-visible rounded-2xl border px-2 py-2.5 text-left transition ${
                   isSelected
                     ? "border-accent/50 bg-accent/12 shadow-[inset_4px_0_0_0_#3B82F6]"
                     : "border-white/8 bg-bg0/55 hover:border-accent/30 hover:bg-white/[0.03]"
@@ -128,7 +128,7 @@ export default function SavedSongs({
                     event.stopPropagation();
                     onAddToSetList(song.videoId);
                   }}
-                  className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full border border-accent/30 bg-accent/12 px-3 text-sm font-semibold text-accent transition hover:bg-accent/20"
+                  className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full border border-accent/30 bg-accent/12 px-2.5 text-sm font-semibold text-accent transition hover:bg-accent/20"
                   aria-label={`Add ${song.title} to set list`}
                 >
                   +
@@ -140,7 +140,7 @@ export default function SavedSongs({
                     event.stopPropagation();
                     onDelete(song.videoId);
                   }}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm text-text1 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200"
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm text-text1 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200"
                   aria-label={`Delete ${song.title}`}
                 >
                   ×

@@ -220,7 +220,7 @@ function SortableSetListRow({
           onSelect(item.id);
         }
       }}
-      className={`group flex items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${
+      className={`group flex items-center gap-2 rounded-2xl border px-2 py-2.5 text-left transition ${
         isDragging
           ? "border-accent/50 bg-bg2 shadow-2xl"
           : isSelected
@@ -237,7 +237,7 @@ function SortableSetListRow({
         {...attributes}
         {...(isReorderDisabled ? {} : listeners)}
         onClick={(event) => event.stopPropagation()}
-        className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-base text-text1 transition ${
+        className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-base text-text1 transition ${
           isReorderDisabled
             ? "cursor-not-allowed opacity-40"
             : "cursor-grab active:cursor-grabbing hover:border-accent/30 hover:text-text0"
@@ -246,7 +246,7 @@ function SortableSetListRow({
       >
         ≡
       </button>
-      <span className="w-6 shrink-0 text-center text-sm font-semibold text-text1">{index + 1}</span>
+      <span className="w-5 shrink-0 text-center text-sm font-semibold text-text1">{index + 1}</span>
       {isPlayingRow ? (
         <span
           className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
@@ -305,14 +305,14 @@ function SortableSetListRow({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1.5">
         <button
           type="button"
           onClick={(event) => {
             event.stopPropagation();
             onRemove(item.id);
           }}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm text-text1 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm text-text1 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200"
           aria-label={`Remove ${song?.title ?? "missing video"} from set list`}
         >
           ×
