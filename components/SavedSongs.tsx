@@ -56,7 +56,7 @@ export default function SavedSongs({
           No saved songs yet.
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="min-h-0 flex-1 overflow-x-visible overflow-y-auto pr-1">
           <div className="space-y-2">
           {songs.map((song) => {
             const isSelected = selectedVideoId === song.videoId;

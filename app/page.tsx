@@ -732,8 +732,44 @@ export default function Home() {
               </div>
             </div>
 
+            <div className="rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-5">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePlaySetList}
+                    className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/18"
+                  >
+                    Play Set List
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => stopPlayback()}
+                    disabled={playbackState === "idle"}
+                    className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-text0 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Stop
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveSetList}
+                    className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-accent/40 bg-accent/12 px-4 py-2 text-sm font-semibold text-accent transition hover:bg-accent/18"
+                  >
+                    Save Set List
+                  </button>
+                  <SavedSetLists
+                    lists={savedSetLists}
+                    loadedSetId={loadedSetId}
+                    onLoad={handleLoadSavedSetList}
+                    onDelete={handleDeleteSavedSetList}
+                  />
+                </div>
+                <div className="text-sm text-text1 md:text-right">{setListStatusLabel}</div>
+              </div>
+            </div>
+
             <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-              <div className="order-2 lg:order-1">
+              <div>
                 <SavedSongs
                   songs={savedSongs}
                   selectedVideoId={selectedVideoId}
@@ -743,25 +779,12 @@ export default function Home() {
                 />
               </div>
 
-              <div className="order-1 lg:order-2">
+              <div>
                 <SetList
                   items={setListItems}
                   songsById={songsById}
                   selectedItemId={selectedSetListItemId}
                   playingIndex={playingIndex}
-                  isPlaying={playbackState !== "idle"}
-                  statusLabel={setListStatusLabel}
-                  onPlaySetList={handlePlaySetList}
-                  onSaveSetList={handleSaveSetList}
-                  onStopPlayback={() => stopPlayback()}
-                  savedSetListsControl={
-                    <SavedSetLists
-                      lists={savedSetLists}
-                      loadedSetId={loadedSetId}
-                      onLoad={handleLoadSavedSetList}
-                      onDelete={handleDeleteSavedSetList}
-                    />
-                  }
                   onSelect={handleSelectSetListItem}
                   onRemove={handleRemoveSetListItem}
                   onMoveUp={(itemId) => moveSetListItem(itemId, -1)}

@@ -1,19 +1,12 @@
 "use client";
 
 import type { SavedSong, SetListItem } from "@/lib/storage";
-import type { ReactNode } from "react";
 
 type SetListProps = {
   items: SetListItem[];
   songsById: Record<string, SavedSong>;
   selectedItemId: string | null;
   playingIndex: number | null;
-  isPlaying: boolean;
-  statusLabel: ReactNode;
-  onSaveSetList(): void;
-  onPlaySetList(): void;
-  onStopPlayback(): void;
-  savedSetListsControl: ReactNode;
   onSelect(itemId: string): void;
   onRemove(itemId: string): void;
   onMoveUp(itemId: string): void;
@@ -25,12 +18,6 @@ export default function SetList({
   songsById,
   selectedItemId,
   playingIndex,
-  isPlaying,
-  statusLabel,
-  onSaveSetList,
-  onPlaySetList,
-  onStopPlayback,
-  savedSetListsControl,
   onSelect,
   onRemove,
   onMoveUp,
@@ -42,36 +29,10 @@ export default function SetList({
         <div>
           <h2 className="text-lg font-semibold text-text0">Set List</h2>
           <p className="text-sm text-text1">Build an ordered draft from your saved songs.</p>
-          <div className="mt-1 text-xs text-text1">{statusLabel}</div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-text1">
-            {items.length}
-          </span>
-          <button
-            type="button"
-            onClick={onPlaySetList}
-            className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/18"
-          >
-            Play Set List
-          </button>
-          <button
-            type="button"
-            onClick={onSaveSetList}
-            className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-accent/40 bg-accent/12 px-4 py-2 text-sm font-semibold text-accent transition hover:bg-accent/18"
-          >
-            Save Set List
-          </button>
-          <button
-            type="button"
-            onClick={onStopPlayback}
-            disabled={!isPlaying}
-            className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-text0 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Stop
-          </button>
-          {savedSetListsControl}
-        </div>
+        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-text1">
+          {items.length}
+        </span>
       </div>
 
       {items.length === 0 ? (
