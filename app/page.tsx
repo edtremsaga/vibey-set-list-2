@@ -707,9 +707,9 @@ export default function Home() {
           </div>
 
           <div className="space-y-4 lg:space-y-3">
-            <div className="w-full lg:max-w-[600px]">
+            <div className="w-full lg:max-w-[480px]">
               <div className="rounded-3xl border border-white/8 bg-bg1/80 p-3.5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-4">
-                <div className="relative overflow-hidden rounded-2xl lg:max-h-[270px]">
+                <div className="relative overflow-hidden rounded-2xl">
                   <YouTubePlayer
                     ref={playerControllerRef}
                     videoId={loadedVideoId}
