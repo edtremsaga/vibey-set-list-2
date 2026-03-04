@@ -22,6 +22,7 @@ import { useEffect, useRef, useState } from "react";
 type SetListProps = {
   items: SetListItem[];
   songsById: Record<string, SavedSong>;
+  loadedSetName: string | null;
   selectedItemId: string | null;
   playingIndex: number | null;
   isReorderDisabled: boolean;
@@ -33,6 +34,7 @@ type SetListProps = {
 export default function SetList({
   items,
   songsById,
+  loadedSetName,
   selectedItemId,
   playingIndex,
   isReorderDisabled,
@@ -116,8 +118,14 @@ export default function SetList({
       className="flex max-h-[58vh] min-h-0 flex-col rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:max-h-[62vh] md:p-5"
     >
       <div className="sticky top-0 z-10 mb-4 flex items-center justify-between gap-3 bg-bg1/95 pb-3 backdrop-blur">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold text-text0">Set List</h2>
+          <p className="truncate text-xs text-text1">
+            Loaded:{" "}
+            <span className="font-medium text-text0">
+              {loadedSetName ?? "Draft (unsaved)"}
+            </span>
+          </p>
           <p className="text-sm text-text1">Build an ordered draft from your saved songs.</p>
         </div>
         <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-text1">

@@ -38,6 +38,7 @@ export default function Home() {
   const [loadedVideoId, setLoadedVideoId] = useState<string | null>(null);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [savedSongs, setSavedSongs] = useState<SavedSong[]>([]);
+  const [savedSongsSortDirection, setSavedSongsSortDirection] = useState<"asc" | "desc">("asc");
   const [savedSetLists, setSavedSetLists] = useState<SavedSetList[]>([]);
   const [loadedSetId, setLoadedSetId] = useState<string | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
@@ -126,6 +127,26 @@ export default function Home() {
       Object.fromEntries(savedSongs.map((song) => [song.videoId, song])),
     [savedSongs]
   );
+
+  const displaySavedSongs = useMemo(() => {
+    const sorted = [...savedSongs].sort((a, b) =>
+      a.title.localeCompare(b.title, undefined, { sensitivity: "base" }),
+    );
+
+    if (savedSongsSortDirection === "desc") {
+      sorted.reverse();
+    }
+
+    return sorted;
+  }, [savedSongs, savedSongsSortDirection]);
+
+  const loadedSetName = useMemo(() => {
+    if (!loadedSetId) {
+      return null;
+    }
+
+    return savedSetLists.find((list) => list.id === loadedSetId)?.name ?? null;
+  }, [loadedSetId, savedSetLists]);
 
   useEffect(() => {
     setListItemsRef.current = setListItems;
@@ -836,8 +857,14 @@ export default function Home() {
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-start">
               <div className="min-w-0">
                 <SavedSongs
-                  songs={savedSongs}
+                  songs={displaySavedSongs}
                   selectedVideoId={selectedVideoId}
+                  sortDirection={savedSongsSortDirection}
+                  onToggleSortDirection={() =>
+                    setSavedSongsSortDirection((current) =>
+                      current === "asc" ? "desc" : "asc",
+                    )
+                  }
                   onSelect={handleSelectSavedSong}
                   onDelete={handleDeleteSavedSong}
                   onAddToSetList={handleAddToSetList}
@@ -848,6 +875,7 @@ export default function Home() {
                 <SetList
                   items={setListItems}
                   songsById={songsById}
+                  loadedSetName={loadedSetName}
                   selectedItemId={selectedSetListItemId}
                   playingIndex={playingIndex}
                   isReorderDisabled={playbackState !== "idle"}

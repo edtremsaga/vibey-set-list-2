@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 type SavedSongsProps = {
   songs: SavedSong[];
   selectedVideoId: string | null;
+  sortDirection: "asc" | "desc";
+  onToggleSortDirection(): void;
   onSelect(videoId: string): void;
   onDelete(videoId: string): void;
   onAddToSetList(videoId: string): void;
@@ -14,6 +16,8 @@ type SavedSongsProps = {
 export default function SavedSongs({
   songs,
   selectedVideoId,
+  sortDirection,
+  onToggleSortDirection,
   onSelect,
   onDelete,
   onAddToSetList,
@@ -46,9 +50,19 @@ export default function SavedSongs({
           <h2 className="text-lg font-semibold text-text0">Saved Songs</h2>
           <p className="text-sm text-text1">Quickly reload a paused preview.</p>
         </div>
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-text1">
-          {songs.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleSortDirection}
+            className="inline-flex min-h-9 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-text1 transition hover:border-white/20 hover:text-text0"
+            aria-label={`Sort saved songs by name ${sortDirection === "asc" ? "descending" : "ascending"}`}
+          >
+            Sort: {sortDirection === "asc" ? "A→Z" : "Z→A"}
+          </button>
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-text1">
+            {songs.length}
+          </span>
+        </div>
       </div>
 
       {songs.length === 0 ? (
