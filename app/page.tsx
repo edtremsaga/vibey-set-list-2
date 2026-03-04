@@ -431,21 +431,9 @@ export default function Home() {
     }
   };
 
-  const moveSetListItem = (itemId: string, direction: -1 | 1) => {
-    setSetListItems((current) => {
-      const index = current.findIndex((item) => item.id === itemId);
-      const targetIndex = index + direction;
-
-      if (index === -1 || targetIndex < 0 || targetIndex >= current.length) {
-        return current;
-      }
-
-      const nextItems = [...current];
-      const [item] = nextItems.splice(index, 1);
-      nextItems.splice(targetIndex, 0, item);
-      saveSetListDraft(nextItems);
-      return nextItems;
-    });
+  const handleReorderSetListItems = (nextItems: SetListItem[]) => {
+    setSetListItems(nextItems);
+    saveSetListDraft(nextItems);
   };
 
   const handleLoadSavedSetList = (id: string) => {
@@ -805,10 +793,10 @@ export default function Home() {
                   songsById={songsById}
                   selectedItemId={selectedSetListItemId}
                   playingIndex={playingIndex}
+                  isReorderDisabled={playbackState !== "idle"}
                   onSelect={handleSelectSetListItem}
                   onRemove={handleRemoveSetListItem}
-                  onMoveUp={(itemId) => moveSetListItem(itemId, -1)}
-                  onMoveDown={(itemId) => moveSetListItem(itemId, 1)}
+                  onReorder={handleReorderSetListItems}
                 />
               </div>
             </div>
