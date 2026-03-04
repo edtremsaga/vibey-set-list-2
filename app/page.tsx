@@ -661,7 +661,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[linear-gradient(to_bottom,#0B0D12,#101522)] px-6 py-10 text-text0 md:px-10 lg:px-12">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 xl:max-w-[1500px]">
         <header className="space-y-3">
           <p className="text-sm font-medium uppercase tracking-[0.24em] text-accent/80">Preview</p>
           <h1 className="text-4xl font-semibold tracking-tight text-text0 md:text-5xl">Set List App</h1>
@@ -707,42 +707,44 @@ export default function Home() {
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-5">
-              <div className="relative">
-                <YouTubePlayer
-                  ref={playerControllerRef}
-                  videoId={loadedVideoId}
-                  onEmbedError={setPlayerError}
-                  onEnded={handlePlaybackEnded}
-                  onError={handlePlaybackError}
-                />
-                {playbackState === "countdown" ? (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/72 px-6 text-center">
-                    <p className="text-sm uppercase tracking-[0.18em] text-text1">Next up:</p>
-                    <p className="mt-2 max-w-md truncate text-lg font-semibold text-text0">
-                      {pendingSongTitle ?? "Loading next song"}
-                    </p>
-                    <p className="mt-4 text-5xl font-semibold tracking-tight text-accent">
-                      {countdownRemaining}
-                    </p>
-                  </div>
-                ) : null}
-                {playbackState === "blocked" ? (
-                  <button
-                    type="button"
-                    onClick={handleBlockedRetry}
-                    className="absolute inset-0 z-10 flex cursor-pointer flex-col items-center justify-center bg-black/72 px-6 text-center"
-                  >
-                    <p className="text-2xl font-semibold text-text0">Tap to continue</p>
-                    <p className="mt-2 text-sm text-text1">
-                      Autoplay is blocked until you tap.
-                    </p>
-                  </button>
-                ) : null}
-              </div>
-              <div className="mt-4 flex items-center justify-between gap-3 text-sm text-text1">
-                <span>Player preview</span>
-                <span>{loadedVideoId ? `Video ID: ${loadedVideoId}` : "Waiting for a valid URL"}</span>
+            <div className="w-full lg:max-w-[700px]">
+              <div className="rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-5">
+                <div className="relative">
+                  <YouTubePlayer
+                    ref={playerControllerRef}
+                    videoId={loadedVideoId}
+                    onEmbedError={setPlayerError}
+                    onEnded={handlePlaybackEnded}
+                    onError={handlePlaybackError}
+                  />
+                  {playbackState === "countdown" ? (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/72 px-6 text-center">
+                      <p className="text-sm uppercase tracking-[0.18em] text-text1">Next up:</p>
+                      <p className="mt-2 max-w-md truncate text-lg font-semibold text-text0">
+                        {pendingSongTitle ?? "Loading next song"}
+                      </p>
+                      <p className="mt-4 text-5xl font-semibold tracking-tight text-accent">
+                        {countdownRemaining}
+                      </p>
+                    </div>
+                  ) : null}
+                  {playbackState === "blocked" ? (
+                    <button
+                      type="button"
+                      onClick={handleBlockedRetry}
+                      className="absolute inset-0 z-10 flex cursor-pointer flex-col items-center justify-center bg-black/72 px-6 text-center"
+                    >
+                      <p className="text-2xl font-semibold text-text0">Tap to continue</p>
+                      <p className="mt-2 text-sm text-text1">
+                        Autoplay is blocked until you tap.
+                      </p>
+                    </button>
+                  ) : null}
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-3 text-sm text-text1">
+                  <span>Player preview</span>
+                  <span>{loadedVideoId ? `Video ID: ${loadedVideoId}` : "Waiting for a valid URL"}</span>
+                </div>
               </div>
             </div>
 
@@ -795,8 +797,8 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-              <div>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-start">
+              <div className="min-w-0">
                 <SavedSongs
                   songs={savedSongs}
                   selectedVideoId={selectedVideoId}
@@ -806,7 +808,7 @@ export default function Home() {
                 />
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <SetList
                   items={setListItems}
                   songsById={songsById}
