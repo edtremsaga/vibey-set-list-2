@@ -37,8 +37,8 @@ export default function SetList({
   onMoveDown,
 }: SetListProps) {
   return (
-    <section className="rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <section className="flex max-h-[58vh] min-h-0 flex-col rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:max-h-[62vh] md:p-5">
+      <div className="sticky top-0 z-10 mb-4 flex items-center justify-between gap-3 bg-bg1/95 pb-3 backdrop-blur">
         <div>
           <h2 className="text-lg font-semibold text-text0">Set List</h2>
           <p className="text-sm text-text1">Build an ordered draft from your saved songs.</p>
@@ -79,7 +79,8 @@ export default function SetList({
           Add songs from Saved Songs to start a draft set list.
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="space-y-2">
           {items.map((item, index) => {
             const song = songsById[item.videoId];
             const isSelected = selectedItemId === item.id;
@@ -177,6 +178,7 @@ export default function SetList({
               </div>
             );
           })}
+          </div>
         </div>
       )}
     </section>

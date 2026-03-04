@@ -40,8 +40,8 @@ export default function SavedSongs({
   }, []);
 
   return (
-    <section className="rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <section className="flex max-h-[58vh] min-h-0 flex-col rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:max-h-[62vh] md:p-5">
+      <div className="sticky top-0 z-10 mb-4 flex items-center justify-between gap-3 bg-bg1/95 pb-3 backdrop-blur">
         <div>
           <h2 className="text-lg font-semibold text-text0">Saved Songs</h2>
           <p className="text-sm text-text1">Quickly reload a paused preview.</p>
@@ -56,7 +56,8 @@ export default function SavedSongs({
           No saved songs yet.
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="space-y-2">
           {songs.map((song) => {
             const isSelected = selectedVideoId === song.videoId;
 
@@ -147,6 +148,7 @@ export default function SavedSongs({
               </div>
             );
           })}
+          </div>
         </div>
       )}
     </section>

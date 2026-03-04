@@ -732,37 +732,43 @@ export default function Home() {
               </div>
             </div>
 
-            <SavedSongs
-              songs={savedSongs}
-              selectedVideoId={selectedVideoId}
-              onSelect={handleSelectSavedSong}
-              onDelete={handleDeleteSavedSong}
-              onAddToSetList={handleAddToSetList}
-            />
-
-            <SetList
-              items={setListItems}
-              songsById={songsById}
-              selectedItemId={selectedSetListItemId}
-              playingIndex={playingIndex}
-              isPlaying={playbackState !== "idle"}
-              statusLabel={setListStatusLabel}
-              onPlaySetList={handlePlaySetList}
-              onSaveSetList={handleSaveSetList}
-              onStopPlayback={() => stopPlayback()}
-              savedSetListsControl={
-                <SavedSetLists
-                  lists={savedSetLists}
-                  loadedSetId={loadedSetId}
-                  onLoad={handleLoadSavedSetList}
-                  onDelete={handleDeleteSavedSetList}
+            <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+              <div className="order-2 lg:order-1">
+                <SavedSongs
+                  songs={savedSongs}
+                  selectedVideoId={selectedVideoId}
+                  onSelect={handleSelectSavedSong}
+                  onDelete={handleDeleteSavedSong}
+                  onAddToSetList={handleAddToSetList}
                 />
-              }
-              onSelect={handleSelectSetListItem}
-              onRemove={handleRemoveSetListItem}
-              onMoveUp={(itemId) => moveSetListItem(itemId, -1)}
-              onMoveDown={(itemId) => moveSetListItem(itemId, 1)}
-            />
+              </div>
+
+              <div className="order-1 lg:order-2">
+                <SetList
+                  items={setListItems}
+                  songsById={songsById}
+                  selectedItemId={selectedSetListItemId}
+                  playingIndex={playingIndex}
+                  isPlaying={playbackState !== "idle"}
+                  statusLabel={setListStatusLabel}
+                  onPlaySetList={handlePlaySetList}
+                  onSaveSetList={handleSaveSetList}
+                  onStopPlayback={() => stopPlayback()}
+                  savedSetListsControl={
+                    <SavedSetLists
+                      lists={savedSetLists}
+                      loadedSetId={loadedSetId}
+                      onLoad={handleLoadSavedSetList}
+                      onDelete={handleDeleteSavedSetList}
+                    />
+                  }
+                  onSelect={handleSelectSetListItem}
+                  onRemove={handleRemoveSetListItem}
+                  onMoveUp={(itemId) => moveSetListItem(itemId, -1)}
+                  onMoveDown={(itemId) => moveSetListItem(itemId, 1)}
+                />
+              </div>
+            </div>
           </div>
         </section>
       </div>
