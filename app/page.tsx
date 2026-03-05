@@ -711,7 +711,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="max-w-2xl text-base leading-7 text-text1 md:text-lg">
-            Paste a YouTube link or video ID to load a song.
+            Paste a YouTube link or video ID to load a song. Save songs to build a set list and jam along.
           </p>
         </header>
 
