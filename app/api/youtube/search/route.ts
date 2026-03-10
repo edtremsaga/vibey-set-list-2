@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
   if (!query) {
     return NextResponse.json({ items: [] });
   }
+  const youtubeQuery = /\bofficial\b/i.test(query) ? query : `${query} official`;
 
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
     part: "snippet",
     type: "video",
     maxResults: "8",
-    q: query,
+    q: youtubeQuery,
     key: apiKey,
   });
 

@@ -46,6 +46,7 @@ export default function Home() {
   const [inputValue, setInputValue] = useState("");
   const [debouncedInput, setDebouncedInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [lastSearchQuery, setLastSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<YouTubeSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchMessage, setSearchMessage] = useState<string | null>(null);
@@ -167,6 +168,10 @@ export default function Home() {
     () => new Set(setListItems.map((item) => item.videoId)),
     [setListItems]
   );
+  const showBroadSearchTip = useMemo(() => {
+    const words = lastSearchQuery.trim().split(/\s+/).filter(Boolean);
+    return words.length >= 1 && words.length <= 2;
+  }, [lastSearchQuery]);
 
   useEffect(() => {
     setListItemsRef.current = setListItems;
@@ -203,6 +208,7 @@ export default function Home() {
     if (!query) {
       return;
     }
+    setLastSearchQuery(query);
 
     setIsSearching(true);
     setSearchMessageTone("info");
@@ -881,6 +887,7 @@ export default function Home() {
                     onChange={(event) => setSearchQuery(event.target.value)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
+                        event.preventDefault();
                         void handleSearchClick();
                       }
                     }}
@@ -908,11 +915,23 @@ export default function Home() {
                 {searchResults.length > 0 ? (
                   <div className="mt-2 space-y-2">
                     {searchResults.map((result) => {
-                      const isDuplicate = setListVideoIds.has(result.videoId);
+                      const isInSetList = setListVideoIds.has(result.videoId);
+                      const isInSavedSongs = savedSongs.some(
+                        (song) => song.videoId === result.videoId
+                      );
                       return (
                         <div
                           key={result.videoId}
-                          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-bg2/70 p-2.5"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleAddSearchResult(result)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              handleAddSearchResult(result);
+                            }
+                          }}
+                          className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-bg2/70 p-2.5 transition hover:border-accent/35 hover:bg-bg2"
                         >
                           <img
                             src={result.thumbnailUrl}
@@ -921,24 +940,46 @@ export default function Home() {
                             loading="lazy"
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-text0">{result.title}</p>
+                            <TruncatedTitle
+                              text={result.title}
+                              className="truncate text-sm font-semibold text-text0"
+                            />
                             <p className="truncate text-xs text-text1">
                               {result.channelTitle} · {result.duration}
                             </p>
-                            {isDuplicate ? (
+                            {isInSavedSongs ? (
+                              <p className="mt-1 text-xs text-emerald-300">Added ✓</p>
+                            ) : null}
+                            {isInSetList ? (
                               <p className="mt-1 text-xs text-amber-300">Already in set list</p>
                             ) : null}
                           </div>
                           <button
                             type="button"
-                            onClick={() => handleAddSearchResult(result)}
-                            className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-xl border border-accent/40 bg-accent/12 px-3 py-2 text-xs font-semibold text-accent transition hover:bg-accent/18"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleAddSearchResult(result);
+                            }}
+                            className={`inline-flex min-h-9 shrink-0 items-center justify-center rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                              isInSavedSongs
+                                ? "border border-white/15 bg-white/5 text-text1 hover:border-white/25 hover:bg-white/10"
+                                : "border border-accent/40 bg-accent/12 text-accent hover:bg-accent/18"
+                            }`}
                           >
-                            {isDuplicate ? "Add anyway" : "Add"}
+                            {isInSavedSongs ? "Add again" : "Add"}
                           </button>
                         </div>
                       );
                     })}
+                  </div>
+                ) : null}
+                {searchResults.length > 0 && showBroadSearchTip ? (
+                  <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-text1">
+                    <p>Tip: add a song title to narrow results.</p>
+                    <p className="mt-1">Examples:</p>
+                    <p>• rolling stones gimme shelter</p>
+                    <p>• rolling stones beast of burden</p>
+                    <p>• paint it black</p>
                   </div>
                 ) : null}
               </div>
@@ -1084,6 +1125,40 @@ export default function Home() {
       </div>
       <HelpModal open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </main>
+  );
+}
+
+function TruncatedTitle({ text, className }: { text: string; className: string }) {
+  const titleRef = useRef<HTMLParagraphElement | null>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const element = titleRef.current;
+    if (!element) {
+      return;
+    }
+
+    const measureTruncation = () => {
+      setIsTruncated(element.scrollWidth > element.clientWidth);
+    };
+
+    measureTruncation();
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver(measureTruncation);
+    resizeObserver.observe(element);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [text]);
+
+  return (
+    <p ref={titleRef} className={className} title={isTruncated ? text : undefined}>
+      {text}
+    </p>
   );
 }
 
