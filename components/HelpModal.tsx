@@ -103,7 +103,7 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
           <section className="space-y-2">
             <h3 className="text-base font-semibold text-text0">URL input + Player</h3>
             <ul className="list-disc space-y-1 pl-5">
-              <li>Search on YouTube: opens YouTube search in a new tab.</li>
+              <li>Search YouTube inline, then click Add (or Add anyway for duplicates) to build your set list.</li>
               <li>Add to Saved Songs: saves the current preview song.</li>
               <li>Player controls (progress bar / play-pause) appear when you hover the player.</li>
             </ul>

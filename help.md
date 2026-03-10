@@ -23,7 +23,7 @@ If the input is invalid, you’ll see an inline validation message.
 
 ### URL + Player Area
 
-- **Search on YouTube**: opens YouTube search in a new tab.
+- **Search YouTube**: searches inline and lets you add results directly to your set list.
 - **Add to Saved Songs**: saves the currently valid preview song.
 - **Clear (×)** inside URL input: clears the field quickly.
 

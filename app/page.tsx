@@ -19,12 +19,19 @@ import {
   type SavedSong,
   type SetListItem,
 } from "@/lib/storage";
-import { buildYouTubeSearchUrl, parseYouTubeVideoId } from "@/lib/youtube";
+import { parseYouTubeVideoId } from "@/lib/youtube";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type StatusTone = "error" | "warning" | "info" | "success";
 type PlaybackState = "idle" | "playing" | "countdown" | "blocked";
 type PlaybackIntent = "user" | "auto";
+type YouTubeSearchResult = {
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  thumbnailUrl: string;
+  duration: string;
+};
 const PAUSE_SECONDS_STORAGE_KEY = "sl_pauseSeconds_v1";
 const DEFAULT_PAUSE_SECONDS = 3;
 const YT_STATE_PLAYING = 1;
@@ -35,8 +42,14 @@ const USER_PLAYBACK_CHECK_DELAY_MS = 1500;
 export default function Home() {
   const playerControllerRef = useRef<YouTubePlayerHandle | null>(null);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [debouncedInput, setDebouncedInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<YouTubeSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchMessage, setSearchMessage] = useState<string | null>(null);
+  const [searchMessageTone, setSearchMessageTone] = useState<StatusTone>("info");
   const [loadedVideoId, setLoadedVideoId] = useState<string | null>(null);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [savedSongs, setSavedSongs] = useState<SavedSong[]>([]);
@@ -150,6 +163,10 @@ export default function Home() {
 
     return savedSetLists.find((list) => list.id === loadedSetId)?.name ?? null;
   }, [loadedSetId, savedSetLists]);
+  const setListVideoIds = useMemo(
+    () => new Set(setListItems.map((item) => item.videoId)),
+    [setListItems]
+  );
 
   useEffect(() => {
     setListItemsRef.current = setListItems;
@@ -181,9 +198,47 @@ export default function Home() {
     };
   }, []);
 
-  const handleSearchClick = () => {
-    const searchUrl = buildYouTubeSearchUrl(inputValue);
-    window.open(searchUrl, "_blank", "noopener,noreferrer");
+  const handleSearchClick = async () => {
+    const query = searchQuery.trim();
+    if (!query) {
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchMessageTone("info");
+    setSearchMessage("Searching YouTube...");
+
+    try {
+      const response = await fetch(`/api/youtube/search?q=${encodeURIComponent(query)}`);
+
+      if (response.status === 429) {
+        setSearchResults([]);
+        setSearchMessageTone("warning");
+        setSearchMessage("Too many searches right now. Try again in a bit.");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Search failed");
+      }
+
+      const data = (await response.json()) as { items?: YouTubeSearchResult[] };
+      const items = Array.isArray(data.items) ? data.items : [];
+      setSearchResults(items);
+
+      if (items.length === 0) {
+        setSearchMessageTone("info");
+        setSearchMessage("No results found");
+      } else {
+        setSearchMessage(null);
+      }
+    } catch {
+      setSearchResults([]);
+      setSearchMessageTone("error");
+      setSearchMessage("Couldn’t reach YouTube. Try again or paste a URL instead.");
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleAddSavedSong = async () => {
@@ -242,6 +297,46 @@ export default function Home() {
       setStatusTone("error");
       setStatusMessage("Could not fetch video details. Try another link.");
     }
+  };
+
+  const handleAddSearchResult = (result: YouTubeSearchResult) => {
+    const canonicalUrl = `https://www.youtube.com/watch?v=${result.videoId}`;
+
+    setSavedSongs((current) => {
+      if (current.some((song) => song.videoId === result.videoId)) {
+        return current;
+      }
+
+      const nextSongs = [
+        ...current,
+        {
+          videoId: result.videoId,
+          title: result.title,
+          thumbnailUrl: result.thumbnailUrl,
+          url: canonicalUrl,
+        },
+      ];
+      saveSavedSongs(nextSongs);
+      return nextSongs;
+    });
+
+    const nextItem: SetListItem = {
+      id: createSetListItemId(),
+      videoId: result.videoId,
+    };
+
+    setSetListItems((current) => {
+      const nextItems = [...current, nextItem];
+      saveSetListDraft(nextItems);
+      return nextItems;
+    });
+
+    setSearchQuery("");
+    setSearchMessageTone("success");
+    setSearchMessage("Added to set list");
+    window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
   };
 
   const handleSelectSavedSong = (videoId: string) => {
@@ -699,6 +794,14 @@ export default function Home() {
         : inlineMessageTone === "info"
           ? "text-text1"
           : "text-red-300";
+  const searchMessageClass =
+    searchMessageTone === "warning"
+      ? "text-amber-300"
+      : searchMessageTone === "success"
+        ? "text-emerald-300"
+        : searchMessageTone === "error"
+          ? "text-red-300"
+          : "text-text1";
 
   return (
     <main className="min-h-screen bg-[linear-gradient(to_bottom,#0B0D12,#101522)] px-6 py-8 text-text0 md:px-10 lg:px-12 lg:py-6">
@@ -711,7 +814,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="max-w-2xl text-base leading-7 text-text1 md:text-lg">
-            Paste a YouTube link or video ID to load a song. Save songs to build a set list and jam along.
+            Search YouTube in-app or paste a YouTube link to load a song. Save songs to build a set list and jam along.
           </p>
         </header>
 
@@ -755,13 +858,6 @@ export default function Home() {
               </div>
               <button
                 type="button"
-                onClick={handleSearchClick}
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500"
-              >
-                Search on YouTube
-              </button>
-              <button
-                type="button"
                 onClick={() => {
                   void handleAddSavedSong();
                 }}
@@ -771,6 +867,80 @@ export default function Home() {
               </button>
               <div className={`min-h-6 text-sm ${inlineMessageClass}`}>
                 {inlineMessage}
+              </div>
+              <div className="border-t border-white/10 pt-3">
+                <label htmlFor="youtube-search" className="block text-sm font-medium text-text0">
+                  Search YouTube
+                </label>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    ref={searchInputRef}
+                    id="youtube-search"
+                    type="text"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        void handleSearchClick();
+                      }
+                    }}
+                    placeholder="Search song or artist (example: Driver 8 or REM Driver 8)"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    className="min-h-12 w-full rounded-2xl border border-white/10 bg-bg2 px-4 py-3 text-sm text-text0 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/25"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleSearchClick();
+                    }}
+                    disabled={isSearching || !searchQuery.trim()}
+                    className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-accent/50"
+                  >
+                    Search
+                  </button>
+                </div>
+                <div className="mt-2 min-h-6 text-sm">
+                  {searchMessage ? <span className={searchMessageClass}>{searchMessage}</span> : null}
+                </div>
+                {searchResults.length > 0 ? (
+                  <div className="mt-2 space-y-2">
+                    {searchResults.map((result) => {
+                      const isDuplicate = setListVideoIds.has(result.videoId);
+                      return (
+                        <div
+                          key={result.videoId}
+                          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-bg2/70 p-2.5"
+                        >
+                          <img
+                            src={result.thumbnailUrl}
+                            alt={result.title}
+                            className="h-14 w-20 rounded-lg object-cover"
+                            loading="lazy"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-text0">{result.title}</p>
+                            <p className="truncate text-xs text-text1">
+                              {result.channelTitle} · {result.duration}
+                            </p>
+                            {isDuplicate ? (
+                              <p className="mt-1 text-xs text-amber-300">Already in set list</p>
+                            ) : null}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleAddSearchResult(result)}
+                            className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-xl border border-accent/40 bg-accent/12 px-3 py-2 text-xs font-semibold text-accent transition hover:bg-accent/18"
+                          >
+                            {isDuplicate ? "Add anyway" : "Add"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -813,7 +983,7 @@ export default function Home() {
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-3 text-sm text-text1">
                   <span>Player preview</span>
-                  <span>{loadedVideoId ? `Video ID: ${loadedVideoId}` : "Waiting for a valid URL"}</span>
+                  <span>{loadedVideoId ? "Preview ready" : "Waiting for a valid URL"}</span>
                 </div>
               </div>
             </div>
