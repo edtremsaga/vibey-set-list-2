@@ -51,6 +51,7 @@ export default function Home() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchMessage, setSearchMessage] = useState<string | null>(null);
   const [searchMessageTone, setSearchMessageTone] = useState<StatusTone>("info");
+  const [recentlyAddedVideoId, setRecentlyAddedVideoId] = useState<string | null>(null);
   const [loadedVideoId, setLoadedVideoId] = useState<string | null>(null);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [savedSongs, setSavedSongs] = useState<SavedSong[]>([]);
@@ -78,6 +79,7 @@ export default function Home() {
   const sessionUnplayableRef = useRef<Set<string>>(new Set());
   const countdownIntervalRef = useRef<number | null>(null);
   const playbackCheckTimeoutRef = useRef<number | null>(null);
+  const addedHighlightTimeoutRef = useRef<number | null>(null);
 
   const parsedVideoId = useMemo(() => parseYouTubeVideoId(debouncedInput), [debouncedInput]);
   const errorMessage = useMemo(() => {
@@ -200,6 +202,9 @@ export default function Home() {
   useEffect(() => {
     return () => {
       clearPlaybackTimers();
+      if (addedHighlightTimeoutRef.current !== null && typeof window !== "undefined") {
+        window.clearTimeout(addedHighlightTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -340,6 +345,15 @@ export default function Home() {
     setSearchQuery("");
     setSearchMessageTone("success");
     setSearchMessage("Added to set list");
+    setRecentlyAddedVideoId(result.videoId);
+    if (typeof window !== "undefined") {
+      if (addedHighlightTimeoutRef.current !== null) {
+        window.clearTimeout(addedHighlightTimeoutRef.current);
+      }
+      addedHighlightTimeoutRef.current = window.setTimeout(() => {
+        setRecentlyAddedVideoId((current) => (current === result.videoId ? null : current));
+      }, 1400);
+    }
     window.requestAnimationFrame(() => {
       searchInputRef.current?.focus();
     });
@@ -888,6 +902,14 @@ export default function Home() {
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         event.preventDefault();
+                        if (
+                          !isSearching &&
+                          searchResults.length > 0 &&
+                          searchQuery.trim().toLowerCase() === lastSearchQuery.trim().toLowerCase()
+                        ) {
+                          handleAddSearchResult(searchResults[0]);
+                          return;
+                        }
                         void handleSearchClick();
                       }
                     }}
@@ -919,6 +941,7 @@ export default function Home() {
                       const isInSavedSongs = savedSongs.some(
                         (song) => song.videoId === result.videoId
                       );
+                      const isRecentlyAdded = recentlyAddedVideoId === result.videoId;
                       return (
                         <div
                           key={result.videoId}
@@ -931,7 +954,11 @@ export default function Home() {
                               handleAddSearchResult(result);
                             }
                           }}
-                          className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-bg2/70 p-2.5 transition hover:border-accent/35 hover:bg-bg2"
+                          className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-2.5 transition hover:border-accent/35 hover:bg-bg2 ${
+                            isRecentlyAdded
+                              ? "border-emerald-400/45 bg-emerald-500/10"
+                              : "border-white/10 bg-bg2/70"
+                          }`}
                         >
                           <img
                             src={result.thumbnailUrl}
@@ -961,12 +988,14 @@ export default function Home() {
                               handleAddSearchResult(result);
                             }}
                             className={`inline-flex min-h-9 shrink-0 items-center justify-center rounded-xl px-3 py-2 text-xs font-semibold transition ${
-                              isInSavedSongs
+                              isRecentlyAdded
+                                ? "border border-emerald-400/45 bg-emerald-500/10 text-emerald-200"
+                                : isInSavedSongs
                                 ? "border border-white/15 bg-white/5 text-text1 hover:border-white/25 hover:bg-white/10"
                                 : "border border-accent/40 bg-accent/12 text-accent hover:bg-accent/18"
                             }`}
                           >
-                            {isInSavedSongs ? "Add again" : "Add"}
+                            {isRecentlyAdded ? "Added ✓" : isInSavedSongs ? "Add again" : "Add"}
                           </button>
                         </div>
                       );
