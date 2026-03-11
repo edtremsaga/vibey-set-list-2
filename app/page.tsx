@@ -942,7 +942,12 @@ export default function Home() {
                         (song) => song.videoId === result.videoId
                       );
                       const isRecentlyAdded = recentlyAddedVideoId === result.videoId;
-                      const displayTitle = decodeHtmlEntities(result.title);
+                      const decodedTitle = decodeHtmlEntities(result.title);
+                      const { artist, song } = splitSearchResultTitle(decodedTitle);
+                      const displayTitle = song;
+                      const displayMeta = artist
+                        ? `${artist} · ${result.channelTitle} · ${result.duration}`
+                        : `${result.channelTitle} · ${result.duration}`;
                       return (
                         <div
                           key={result.videoId}
@@ -973,7 +978,7 @@ export default function Home() {
                               className="truncate text-sm font-semibold text-text0"
                             />
                             <p className="truncate text-xs text-text1">
-                              {result.channelTitle} · {result.duration}
+                              {displayMeta}
                             </p>
                             {isInSavedSongs ? (
                               <p className="mt-1 text-xs text-emerald-300">Added ✓</p>
@@ -1200,6 +1205,19 @@ function decodeHtmlEntities(text: string): string {
   const textarea = document.createElement("textarea");
   textarea.innerHTML = text;
   return textarea.value;
+}
+
+function splitSearchResultTitle(title: string): { artist: string | null; song: string } {
+  const parts = title.split(" - ");
+  if (parts.length === 2) {
+    const artist = parts[0]?.trim() ?? "";
+    const song = parts[1]?.trim() ?? "";
+    if (artist && song) {
+      return { artist, song };
+    }
+  }
+
+  return { artist: null, song: title };
 }
 
 function createId(): string {
