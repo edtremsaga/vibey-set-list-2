@@ -942,6 +942,7 @@ export default function Home() {
                         (song) => song.videoId === result.videoId
                       );
                       const isRecentlyAdded = recentlyAddedVideoId === result.videoId;
+                      const displayTitle = decodeHtmlEntities(result.title);
                       return (
                         <div
                           key={result.videoId}
@@ -962,13 +963,13 @@ export default function Home() {
                         >
                           <img
                             src={result.thumbnailUrl}
-                            alt={result.title}
+                            alt={displayTitle}
                             className="h-14 w-20 rounded-lg object-cover"
                             loading="lazy"
                           />
                           <div className="min-w-0 flex-1">
                             <TruncatedTitle
-                              text={result.title}
+                              text={displayTitle}
                               className="truncate text-sm font-semibold text-text0"
                             />
                             <p className="truncate text-xs text-text1">
@@ -1189,6 +1190,16 @@ function TruncatedTitle({ text, className }: { text: string; className: string }
       {text}
     </p>
   );
+}
+
+function decodeHtmlEntities(text: string): string {
+  if (typeof window === "undefined") {
+    return text;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = text;
+  return textarea.value;
 }
 
 function createId(): string {
