@@ -834,7 +834,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="max-w-2xl text-base leading-7 text-text1 md:text-lg">
-            Search YouTube in-app or paste a YouTube link to load a song. Save songs to build a set list and jam along.
+            Search YouTube to find music for your set list — or paste a YouTube link if you already have one.
           </p>
         </header>
 

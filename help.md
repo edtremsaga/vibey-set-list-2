@@ -23,9 +23,17 @@ If the input is invalid, you’ll see an inline validation message.
 
 ### URL + Player Area
 
-- **Search YouTube**: searches inline and lets you add results directly to your set list.
 - **Add to Saved Songs**: saves the currently valid preview song.
 - **Clear (×)** inside URL input: clears the field quickly.
+
+### Song Search
+
+- **Search YouTube** runs in-app and returns inline results.
+- **Enter** or **Search** triggers a query.
+- Press **Enter** again to add the first result (when results are present).
+- Click anywhere on a result row to add that song to your set list.
+- If a song is already saved, the row shows **Add again**.
+- If a song is already in the set list, the row shows **Already in set list**.
 
 ### Saved Songs
 

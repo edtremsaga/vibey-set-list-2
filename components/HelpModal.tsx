@@ -103,9 +103,19 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
           <section className="space-y-2">
             <h3 className="text-base font-semibold text-text0">URL input + Player</h3>
             <ul className="list-disc space-y-1 pl-5">
-              <li>Search YouTube inline, then click Add (or Add anyway for duplicates) to build your set list.</li>
               <li>Add to Saved Songs: saves the current preview song.</li>
               <li>Player controls (progress bar / play-pause) appear when you hover the player.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-base font-semibold text-text0">Song Search</h3>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Use Search YouTube to find songs without leaving the app.</li>
+              <li>Press Enter or click Search to run a query.</li>
+              <li>Press Enter again to add the first search result.</li>
+              <li>Click anywhere on a result row to add it to your set list.</li>
+              <li>Add again appears for songs already in Saved Songs; Already in set list warns on duplicates.</li>
             </ul>
           </section>
 
