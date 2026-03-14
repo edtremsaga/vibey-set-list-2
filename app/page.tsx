@@ -58,6 +58,8 @@ export default function Home() {
   const [savedSongsSortDirection, setSavedSongsSortDirection] = useState<"asc" | "desc">("asc");
   const [savedSetLists, setSavedSetLists] = useState<SavedSetList[]>([]);
   const [loadedSetId, setLoadedSetId] = useState<string | null>(null);
+  const [isSetListDirty, setIsSetListDirty] = useState(false);
+  const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [setListItems, setSetListItems] = useState<SetListItem[]>([]);
   const [selectedSetListItemId, setSelectedSetListItemId] = useState<string | null>(null);
@@ -80,6 +82,7 @@ export default function Home() {
   const countdownIntervalRef = useRef<number | null>(null);
   const playbackCheckTimeoutRef = useRef<number | null>(null);
   const addedHighlightTimeoutRef = useRef<number | null>(null);
+  const saveMenuRef = useRef<HTMLDivElement | null>(null);
 
   const parsedVideoId = useMemo(() => parseYouTubeVideoId(debouncedInput), [debouncedInput]);
   const errorMessage = useMemo(() => {
@@ -111,6 +114,11 @@ export default function Home() {
     setSavedSetLists(sortSavedSetLists(lists));
     const draftItems = loadSetListDraft();
     setSetListItems(draftItems);
+    if (draftItems.length === 0) {
+      // Fresh blank set list context: no loaded identity + empty working set + clean state.
+      setLoadedSetId(null);
+      setIsSetListDirty(false);
+    }
 
     if (consumeSavedSongsCorruptionFlag()) {
       setStatusTone("warning");
@@ -207,6 +215,31 @@ export default function Home() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isSaveMenuOpen || typeof document === "undefined") {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!saveMenuRef.current?.contains(event.target as Node)) {
+        setIsSaveMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsSaveMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSaveMenuOpen]);
 
   const handleSearchClick = async () => {
     const query = searchQuery.trim();
@@ -341,6 +374,7 @@ export default function Home() {
       saveSetListDraft(nextItems);
       return nextItems;
     });
+    setIsSetListDirty(true);
 
     setSearchQuery("");
     setSearchMessageTone("success");
@@ -451,6 +485,7 @@ export default function Home() {
       saveSetListDraft(nextItems);
       return nextItems;
     });
+    setIsSetListDirty(true);
   };
 
   const handlePlaySetList = () => {
@@ -471,6 +506,23 @@ export default function Home() {
     startPlayback(0, "user");
   };
 
+  const saveAsNewSetList = (name: string) => {
+    const now = new Date().toISOString();
+    const nextList: SavedSetList = {
+      id: createId(),
+      name,
+      createdAt: now,
+      items: setListItems,
+    };
+
+    const nextLists = sortSavedSetLists([nextList, ...savedSetLists]);
+    setSavedSetLists(nextLists);
+    setLoadedSetId(nextList.id);
+    setIsSetListDirty(false);
+    saveSavedSetLists(nextLists);
+    return nextList;
+  };
+
   const handleSaveSetList = () => {
     if (setListItems.length === 0) {
       setStatusTone("error");
@@ -478,7 +530,57 @@ export default function Home() {
       return;
     }
 
+    if (loadedSetId) {
+      const existingLoaded = savedSetLists.find((list) => list.id === loadedSetId);
+      if (existingLoaded) {
+        const now = new Date().toISOString();
+        const nextLists = sortSavedSetLists(
+          savedSetLists.map((list) =>
+            list.id === loadedSetId
+              ? {
+                  ...list,
+                  createdAt: now,
+                  items: setListItems,
+                }
+              : list
+          )
+        );
+
+        setSavedSetLists(nextLists);
+        setLoadedSetId(loadedSetId);
+        setIsSetListDirty(false);
+        saveSavedSetLists(nextLists);
+        setStatusTone("success");
+        setStatusMessage("Saved.");
+        return;
+      }
+      setLoadedSetId(null);
+    }
+
     const proposedName = window.prompt("Name this set list:");
+    if (proposedName === null) {
+      return;
+    }
+    const trimmedName = proposedName.trim();
+    if (!trimmedName) {
+      setStatusTone("error");
+      setStatusMessage("Set list name is required.");
+      return;
+    }
+
+    const created = saveAsNewSetList(trimmedName);
+    setStatusTone("success");
+    setStatusMessage(`Saved '${created.name}'.`);
+  };
+
+  const handleSaveAsNewSetList = () => {
+    if (setListItems.length === 0) {
+      setStatusTone("error");
+      setStatusMessage("Add songs to your set list.");
+      return;
+    }
+
+    const proposedName = window.prompt("Name this new set list:");
     if (proposedName === null) {
       return;
     }
@@ -490,55 +592,9 @@ export default function Home() {
       return;
     }
 
-    const existing = savedSetLists.find(
-      (list) => list.name.trim().toLowerCase() === trimmedName.toLowerCase()
-    );
-    const now = new Date().toISOString();
-
-    if (existing) {
-      const shouldOverwrite = window.confirm(
-        `Overwrite existing set list '${existing.name}'?`
-      );
-      if (!shouldOverwrite) {
-        return;
-      }
-
-      const nextLists = sortSavedSetLists(
-        savedSetLists.map((list) =>
-          list.id === existing.id
-            ? {
-                ...list,
-                name: trimmedName,
-                createdAt: now,
-                items: setListItems,
-              }
-            : list
-        )
-      );
-
-      setSavedSetLists(nextLists);
-      setLoadedSetId(existing.id);
-      saveSavedSetLists(nextLists);
-      setStatusTone("success");
-      setStatusMessage(`Overwrote '${trimmedName}'.`);
-      return;
-    }
-
-    const nextLists = sortSavedSetLists([
-      {
-        id: createId(),
-        name: trimmedName,
-        createdAt: now,
-        items: setListItems,
-      },
-      ...savedSetLists,
-    ]);
-
-    setSavedSetLists(nextLists);
-    setLoadedSetId(nextLists[0]?.id ?? null);
-    saveSavedSetLists(nextLists);
+    const created = saveAsNewSetList(trimmedName);
     setStatusTone("success");
-    setStatusMessage(`Saved '${trimmedName}'.`);
+    setStatusMessage(`Saved as new set list '${created.name}'.`);
   };
 
   const handleSelectSetListItem = (itemId: string) => {
@@ -573,6 +629,7 @@ export default function Home() {
       saveSetListDraft(nextItems);
       return nextItems;
     });
+    setIsSetListDirty(true);
 
     if (selectedSetListItemId === itemId) {
       setSelectedSetListItemId(null);
@@ -582,6 +639,7 @@ export default function Home() {
   const handleReorderSetListItems = (nextItems: SetListItem[]) => {
     setSetListItems(nextItems);
     saveSetListDraft(nextItems);
+    setIsSetListDirty(true);
   };
 
   const handleLoadSavedSetList = (id: string) => {
@@ -592,6 +650,7 @@ export default function Home() {
 
     setSetListItems(list.items);
     setLoadedSetId(id);
+    setIsSetListDirty(false);
     saveSetListDraft(list.items);
     setSelectedSetListItemId(null);
     setSelectedVideoId(null);
@@ -604,8 +663,9 @@ export default function Home() {
     setSavedSetLists(nextLists);
     saveSavedSetLists(nextLists);
 
-     if (loadedSetId === id) {
+    if (loadedSetId === id) {
       setLoadedSetId(null);
+      setIsSetListDirty(false);
     }
   };
 
@@ -1064,7 +1124,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/8 bg-bg1/80 p-3.5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-4">
+            <div className="relative z-30 rounded-3xl border border-white/8 bg-bg1/80 p-3.5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div className="flex flex-wrap items-center gap-2">
                   <button
@@ -1078,13 +1138,40 @@ export default function Home() {
                   >
                     {playbackState === "idle" ? "Play Set List" : "Stop Set List"}
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveSetList}
-                    className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-accent/40 bg-accent/12 px-4 py-2 text-sm font-semibold text-accent transition hover:bg-accent/18"
-                  >
-                    Save Set List
-                  </button>
+                  <div ref={saveMenuRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsSaveMenuOpen((current) => !current)}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-2xl border border-accent/40 bg-accent/12 px-4 py-2 text-sm font-semibold text-accent transition hover:bg-accent/18"
+                    >
+                      Save Set List
+                      <span aria-hidden>▾</span>
+                    </button>
+                    {isSaveMenuOpen ? (
+                      <div className="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[220px] rounded-2xl border border-white/10 bg-bg2 p-1.5 shadow-xl">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsSaveMenuOpen(false);
+                            handleSaveSetList();
+                          }}
+                          className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-text0 transition hover:bg-white/[0.06]"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsSaveMenuOpen(false);
+                            handleSaveAsNewSetList();
+                          }}
+                          className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-text0 transition hover:bg-white/[0.06]"
+                        >
+                          Save As New Set List
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                   <SavedSetLists
                     lists={savedSetLists}
                     loadedSetId={loadedSetId}
@@ -1122,6 +1209,12 @@ export default function Home() {
                   </label>
                 </div>
               </div>
+              {loadedSetName ? (
+                <p className="text-xs text-text1">
+                  Loaded: <span className="font-medium text-text0">{loadedSetName}</span>
+                  {isSetListDirty ? <span> • Unsaved changes</span> : null}
+                </p>
+              ) : null}
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-start">
