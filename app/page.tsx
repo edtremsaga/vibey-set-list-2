@@ -1,10 +1,13 @@
 "use client";
 
+import NameDialog from "@/components/NameDialog";
 import SavedSongs from "@/components/SavedSongs";
 import HelpModal from "@/components/HelpModal";
 import SavedSetLists from "@/components/SavedSetLists";
 import SetList from "@/components/SetList";
-import YouTubePlayer, { type YouTubePlayerHandle } from "@/components/YouTubePlayer";
+import type { YouTubePlayerHandle } from "@/components/YouTubePlayer";
+import SongPlayer from "@/components/SongPlayer";
+import RecordingImport from "@/components/RecordingImport";
 import {
   consumeSavedSetListsCorruptionFlag,
   consumeSetListDraftCorruptionFlag,
@@ -59,6 +62,7 @@ export default function Home() {
   const [savedSetLists, setSavedSetLists] = useState<SavedSetList[]>([]);
   const [loadedSetId, setLoadedSetId] = useState<string | null>(null);
   const [isSetListDirty, setIsSetListDirty] = useState(false);
+  const [nameDialog, setNameDialog] = useState<"save" | "new" | null>(null);
   const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [setListItems, setSetListItems] = useState<SetListItem[]>([]);
@@ -286,7 +290,7 @@ export default function Home() {
   };
 
   const handleAddSavedSong = async () => {
-    if (!loadedVideoId) {
+    if (!parsedVideoId || loadedVideoId !== parsedVideoId) {
       setStatusTone("error");
       setStatusMessage("Paste a valid YouTube link or video ID first.");
       return;
@@ -394,11 +398,12 @@ export default function Home() {
   };
 
   const handleSelectSavedSong = (videoId: string) => {
+    if (playbackState !== "idle") stopPlayback(true);
     setSelectedVideoId(videoId);
     setSelectedSetListItemId(null);
     setLoadedVideoId((current) => (current === videoId ? current : videoId));
-    setInputValue(`https://www.youtube.com/watch?v=${videoId}`);
-    setDebouncedInput(`https://www.youtube.com/watch?v=${videoId}`);
+    setInputValue(songsById[videoId]?.url ?? "");
+    setDebouncedInput(songsById[videoId]?.url ?? "");
     setPlayerError(null);
   };
 
@@ -438,8 +443,8 @@ export default function Home() {
       setPendingIndex(null);
       setCountdownRemaining(0);
       setLoadedVideoId(item.videoId);
-      setInputValue(`https://www.youtube.com/watch?v=${item.videoId}`);
-      setDebouncedInput(`https://www.youtube.com/watch?v=${item.videoId}`);
+      setInputValue(currentSongsById[item.videoId].url);
+      setDebouncedInput(currentSongsById[item.videoId].url);
       setPlayerError(null);
       playerControllerRef.current?.play(item.videoId);
       schedulePlaybackCheck(
@@ -516,10 +521,10 @@ export default function Home() {
     };
 
     const nextLists = sortSavedSetLists([nextList, ...savedSetLists]);
+    saveSavedSetLists(nextLists);
     setSavedSetLists(nextLists);
     setLoadedSetId(nextList.id);
     setIsSetListDirty(false);
-    saveSavedSetLists(nextLists);
     return nextList;
   };
 
@@ -557,20 +562,7 @@ export default function Home() {
       setLoadedSetId(null);
     }
 
-    const proposedName = window.prompt("Name this set list:");
-    if (proposedName === null) {
-      return;
-    }
-    const trimmedName = proposedName.trim();
-    if (!trimmedName) {
-      setStatusTone("error");
-      setStatusMessage("Set list name is required.");
-      return;
-    }
-
-    const created = saveAsNewSetList(trimmedName);
-    setStatusTone("success");
-    setStatusMessage(`Saved '${created.name}'.`);
+    setNameDialog("save");
   };
 
   const handleSaveAsNewSetList = () => {
@@ -580,21 +572,7 @@ export default function Home() {
       return;
     }
 
-    const proposedName = window.prompt("Name this new set list:");
-    if (proposedName === null) {
-      return;
-    }
-
-    const trimmedName = proposedName.trim();
-    if (!trimmedName) {
-      setStatusTone("error");
-      setStatusMessage("Set list name is required.");
-      return;
-    }
-
-    const created = saveAsNewSetList(trimmedName);
-    setStatusTone("success");
-    setStatusMessage(`Saved as new set list '${created.name}'.`);
+    setNameDialog("new");
   };
 
   const handleSelectSetListItem = (itemId: string) => {
@@ -885,6 +863,13 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[linear-gradient(to_bottom,#0B0D12,#101522)] px-6 py-8 text-text0 md:px-10 lg:px-12 lg:py-6">
+      {nameDialog && <NameDialog title={nameDialog === "new" ? "Save as new set list" : "Save set list"} label="Set list name"
+        onCancel={() => setNameDialog(null)} onSave={(name) => {
+          const created = saveAsNewSetList(name);
+          setStatusTone("success");
+          setStatusMessage(`Saved '${created.name}'.`);
+          setNameDialog(null);
+        }} />}
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:gap-4 xl:max-w-[1500px]">
         <header className="space-y-1.5 border-b border-white/5 pb-4">
           <h1 className="text-4xl font-semibold tracking-tight text-text0 md:text-5xl">
@@ -894,13 +879,23 @@ export default function Home() {
             </span>
           </h1>
           <p className="max-w-2xl text-base leading-7 text-text1 md:text-lg">
-            Search YouTube to find music for your set list — or paste a YouTube link if you already have one.
+            Build a set list with YouTube songs or import your own MP3 recordings.
           </p>
         </header>
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
           <div className="rounded-3xl border border-white/8 bg-bg1/90 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur lg:p-4">
             <div className="space-y-3">
+              <RecordingImport onImport={(song) => {
+                const current = Object.values(songsByIdRef.current);
+                const exists = current.some((entry) => entry.videoId === song.videoId);
+                if (exists) return false;
+                const next = [...current, song];
+                saveSavedSongs(next);
+                songsByIdRef.current = Object.fromEntries(next.map((entry) => [entry.videoId, entry]));
+                setSavedSongs(next);
+                return true;
+              }} />
               <label htmlFor="youtube-url" className="block text-sm font-medium text-text0">
                 YouTube URL or video ID
               </label>
@@ -1085,9 +1080,10 @@ export default function Home() {
             <div className="w-full lg:max-w-[480px]">
               <div className="rounded-3xl border border-white/8 bg-bg1/80 p-3.5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-4">
                 <div className="relative overflow-hidden rounded-2xl">
-                  <YouTubePlayer
+                  <SongPlayer
                     ref={playerControllerRef}
                     videoId={loadedVideoId}
+                    title={loadedVideoId ? songsById[loadedVideoId]?.title : undefined}
                     onEmbedError={setPlayerError}
                     onEnded={handlePlaybackEnded}
                     onError={handlePlaybackError}
@@ -1119,7 +1115,7 @@ export default function Home() {
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-3 text-sm text-text1">
                   <span>Player preview</span>
-                  <span>{loadedVideoId ? "Preview ready" : "Waiting for a valid URL"}</span>
+                  <span>{loadedVideoId ? "Preview ready" : "Choose a song or import a recording"}</span>
                 </div>
               </div>
             </div>
@@ -1217,13 +1213,18 @@ export default function Home() {
               ) : null}
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-start">
+            <div className="song-library"><div className="song-library-grid grid gap-4 items-start">
               <div className="min-w-0">
                 <SavedSongs
                   songs={displaySavedSongs}
                   selectedVideoId={selectedVideoId}
                   sortDirection={savedSongsSortDirection}
-                  onToggleSortDirection={() =>
+                  onRename={(id, title) => {
+              const next = savedSongs.map((song) => song.videoId === id ? { ...song, title } : song);
+              saveSavedSongs(next);
+              setSavedSongs(next);
+            }}
+            onToggleSortDirection={() =>
                     setSavedSongsSortDirection((current) =>
                       current === "asc" ? "desc" : "asc",
                     )
@@ -1247,7 +1248,7 @@ export default function Home() {
                   onReorder={handleReorderSetListItems}
                 />
               </div>
-            </div>
+            </div></div>
           </div>
         </section>
       </div>

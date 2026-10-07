@@ -115,7 +115,7 @@ export default function SetList({
   return (
     <section
       ref={sectionRef}
-      className="flex max-h-[58vh] min-h-0 flex-col rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:max-h-[62vh] md:p-5"
+      className="song-panel flex max-h-[58vh] min-h-0 flex-col rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:max-h-[62vh] md:p-5"
     >
       <div className="sticky top-0 z-10 mb-4 flex items-center justify-between gap-3 bg-bg1/95 pb-3 backdrop-blur">
         <div className="min-w-0">
@@ -228,7 +228,7 @@ function SortableSetListRow({
           onSelect(item.id);
         }
       }}
-      className={`group flex items-center gap-2 rounded-2xl border px-2 py-2.5 text-left transition ${
+      className={`set-list-row group flex items-center gap-2 rounded-2xl border px-2 py-2.5 text-left transition ${
         isDragging
           ? "border-accent/50 bg-bg2 shadow-2xl"
           : isSelected
@@ -255,7 +255,7 @@ function SortableSetListRow({
         ≡
       </button>
       <span
-        className={`w-4 shrink-0 text-center text-xs text-green-300 ${isPlayingRow ? "opacity-100" : "opacity-0"}`}
+        className={`set-list-playing w-4 shrink-0 text-center text-xs text-green-300 ${isPlayingRow ? "opacity-100" : "opacity-0"}`}
         aria-label={isPlayingRow ? "Currently playing" : undefined}
         aria-hidden={!isPlayingRow}
       >
@@ -268,10 +268,10 @@ function SortableSetListRow({
         <img
           src={song.thumbnailUrl}
           alt={song.title}
-          className="h-12 w-20 shrink-0 rounded-lg object-cover ring-1 ring-white/10"
+          className="song-artwork h-12 w-20 shrink-0 rounded-lg object-cover ring-1 ring-white/10"
         />
       ) : (
-        <div className="flex h-12 w-20 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.03] text-[11px] text-text1/70">
+        <div className="song-artwork flex h-12 w-20 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.03] text-[11px] text-text1/70">
           Missing
         </div>
       )}
@@ -279,7 +279,7 @@ function SortableSetListRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <div className="relative min-w-0 flex-1">
-            <p className={`truncate text-sm font-medium ${isMissing ? "text-text1/70" : "text-text0"}`}>
+            <p className={`song-title truncate text-sm font-medium ${isMissing ? "text-text1/70" : "text-text0"}`}>
               {song?.title ?? "Missing video"}
             </p>
             {!isTouchDevice && !isMissing ? (

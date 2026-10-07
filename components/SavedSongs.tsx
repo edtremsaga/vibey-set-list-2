@@ -1,5 +1,6 @@
 "use client";
 
+import NameDialog from "./NameDialog";
 import type { SavedSong } from "@/lib/storage";
 import { useEffect, useState } from "react";
 
@@ -8,6 +9,7 @@ type SavedSongsProps = {
   selectedVideoId: string | null;
   sortDirection: "asc" | "desc";
   onToggleSortDirection(): void;
+  onRename(id: string, title: string): void;
   onSelect(videoId: string): void;
   onDelete(videoId: string): void;
   onAddToSetList(videoId: string): void;
@@ -18,10 +20,12 @@ export default function SavedSongs({
   selectedVideoId,
   sortDirection,
   onToggleSortDirection,
+  onRename,
   onSelect,
   onDelete,
   onAddToSetList,
 }: SavedSongsProps) {
+  const [renaming, setRenaming] = useState<SavedSong | null>(null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [openInfoVideoId, setOpenInfoVideoId] = useState<string | null>(null);
 
@@ -44,7 +48,9 @@ export default function SavedSongs({
   }, []);
 
   return (
-    <section className="flex max-h-[58vh] min-h-0 flex-col rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:max-h-[62vh] md:p-5">
+    <section className="song-panel flex max-h-[58vh] min-h-0 flex-col rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:max-h-[62vh] md:p-5">
+      {renaming && <NameDialog title="Edit recording title" label="Recording title" initialValue={renaming.title}
+        onCancel={() => setRenaming(null)} onSave={(title) => { onRename(renaming.videoId, title); setRenaming(null); }} />}
       <div className="sticky top-0 z-10 mb-4 flex items-center justify-between gap-3 bg-bg1/95 pb-3 backdrop-blur">
         <div>
           <h2 className="text-lg font-semibold text-text0">Saved Songs</h2>
@@ -82,7 +88,7 @@ export default function SavedSongs({
                 tabIndex={0}
                 onClick={() => onSelect(song.videoId)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
+                  if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
                     event.preventDefault();
                     onSelect(song.videoId);
                   }
@@ -97,13 +103,14 @@ export default function SavedSongs({
                 <img
                   src={song.thumbnailUrl}
                   alt={song.title}
-                  className="h-12 w-20 shrink-0 rounded-lg object-cover ring-1 ring-white/10"
+                  className="song-artwork h-12 w-20 shrink-0 rounded-lg object-cover ring-1 ring-white/10"
                 />
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <div className="relative min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-text0">{song.title}</p>
+                      <p className="song-title truncate text-sm font-medium text-text0">{song.title}</p>
+                      {song.source === "local" && <p className="text-xs text-text1">MP3 · This browser</p>}
                       {!isTouchDevice ? (
                         <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden max-w-xs rounded-xl border border-white/10 bg-bg2 px-3 py-2 text-xs leading-5 text-text0 shadow-xl group-hover:block">
                           {song.title}
@@ -136,6 +143,10 @@ export default function SavedSongs({
                   </div>
                 </div>
 
+                {song.source === "local" && <button type="button" className="text-xs text-blue-300" aria-label={`Rename ${song.title}`} onClick={(event) => {
+                  event.stopPropagation();
+                  setRenaming(song);
+                }}>Edit</button>}
                 <button
                   type="button"
                   onClick={(event) => {

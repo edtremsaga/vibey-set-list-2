@@ -28,3 +28,35 @@ body {
   color: var(--text0);
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
+
+/* Size the library by its available space, including embedded preview panels. */
+.song-library {
+  container: song-library / inline-size;
+}
+
+@container song-library (min-width: 62rem) {
+  .song-library-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+
+.song-panel {
+  container: song-panel / inline-size;
+}
+
+@container song-panel (max-width: 28rem) {
+  .song-artwork {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .song-title {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* The playing row already has a green border; reclaim the reserved icon space. */
+  .set-list-playing {
+    display: none;
+  }
+}

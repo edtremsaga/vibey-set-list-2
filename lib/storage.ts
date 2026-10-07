@@ -1,4 +1,7 @@
+import { RECORDING_ID_PATTERN } from "./recordings";
+
 export type SavedSong = {
+  source?: "youtube" | "local";
   videoId: string;
   title: string;
   thumbnailUrl: string;
@@ -17,9 +20,9 @@ export type SavedSetList = {
   items: SetListItem[];
 };
 
-const SAVED_SONGS_STORAGE_KEY = "sl_savedSongs_v1";
-const SET_LIST_DRAFT_STORAGE_KEY = "sl_setListDraft_v1";
-const SAVED_SET_LISTS_STORAGE_KEY = "sl_savedSetLists_v1";
+const SAVED_SONGS_STORAGE_KEY = "sl_savedSongs_v2";
+const SET_LIST_DRAFT_STORAGE_KEY = "sl_setListDraft_v2";
+const SAVED_SET_LISTS_STORAGE_KEY = "sl_savedSetLists_v2";
 const VIDEO_ID_PATTERN = /^[a-zA-Z0-9_-]{11}$/;
 
 let lastSavedSongsLoadWasCorrupt = false;
@@ -33,7 +36,7 @@ export function loadSavedSongs(): SavedSong[] {
     return [];
   }
 
-  const raw = window.localStorage.getItem(SAVED_SONGS_STORAGE_KEY);
+  const raw = window.localStorage.getItem(SAVED_SONGS_STORAGE_KEY) ?? window.localStorage.getItem(SAVED_SONGS_STORAGE_KEY.replace("_v2", "_v1"));
   if (!raw) {
     return [];
   }
@@ -70,7 +73,7 @@ export function loadSetListDraft(): SetListItem[] {
     return [];
   }
 
-  const raw = window.localStorage.getItem(SET_LIST_DRAFT_STORAGE_KEY);
+  const raw = window.localStorage.getItem(SET_LIST_DRAFT_STORAGE_KEY) ?? window.localStorage.getItem(SET_LIST_DRAFT_STORAGE_KEY.replace("_v2", "_v1"));
   if (!raw) {
     return [];
   }
@@ -107,7 +110,7 @@ export function loadSavedSetLists(): SavedSetList[] {
     return [];
   }
 
-  const raw = window.localStorage.getItem(SAVED_SET_LISTS_STORAGE_KEY);
+  const raw = window.localStorage.getItem(SAVED_SET_LISTS_STORAGE_KEY) ?? window.localStorage.getItem(SAVED_SET_LISTS_STORAGE_KEY.replace("_v2", "_v1"));
   if (!raw) {
     return [];
   }
@@ -191,6 +194,13 @@ function validateSavedSong(value: unknown): SavedSong | null {
   }
 
   const song = value as Partial<SavedSong>;
+  if (song.source === "local") {
+    if (typeof song.videoId !== "string" || !RECORDING_ID_PATTERN.test(song.videoId) ||
+        typeof song.title !== "string" || !song.title.trim() ||
+        typeof song.thumbnailUrl !== "string" || song.url !== "") return null;
+    return { source: "local", videoId: song.videoId, title: song.title, thumbnailUrl: song.thumbnailUrl, url: "" };
+  }
+  if (song.source !== undefined && song.source !== "youtube") return null;
   if (
     typeof song.videoId !== "string" ||
     !VIDEO_ID_PATTERN.test(song.videoId) ||
@@ -222,7 +232,7 @@ function validateSetListItem(value: unknown): SetListItem | null {
     typeof item.id !== "string" ||
     item.id.trim() === "" ||
     typeof item.videoId !== "string" ||
-    !VIDEO_ID_PATTERN.test(item.videoId)
+    (!VIDEO_ID_PATTERN.test(item.videoId) && !RECORDING_ID_PATTERN.test(item.videoId))
   ) {
     return null;
   }
