@@ -25,6 +25,15 @@ export default function SavedSongs({
   onDelete,
   onAddToSetList,
 }: SavedSongsProps) {
+  const [query, setQuery] = useState("");
+  const [source, setSource] = useState<"all" | "local" | "youtube">("all");
+  const search = query.trim().toLowerCase();
+  const isFiltered = search.length > 0 || source !== "all";
+  const visibleSongs = songs.filter((song) =>
+    (source === "all" || (song.source ?? "youtube") === source) &&
+    song.title.toLowerCase().includes(search)
+  );
+  const clearFilters = () => { setQuery(""); setSource("all"); };
   const [renaming, setRenaming] = useState<SavedSong | null>(null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [openInfoVideoId, setOpenInfoVideoId] = useState<string | null>(null);
@@ -51,7 +60,9 @@ export default function SavedSongs({
     <section className="song-panel flex max-h-[58vh] min-h-0 flex-col rounded-3xl border border-white/8 bg-bg1/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:max-h-[62vh] md:p-5">
       {renaming && <NameDialog title="Edit recording title" label="Recording title" initialValue={renaming.title}
         onCancel={() => setRenaming(null)} onSave={(title) => { onRename(renaming.videoId, title); setRenaming(null); }} />}
-      <div className="sticky top-0 z-10 mb-4 flex items-center justify-between gap-3 bg-bg1/95 pb-3 backdrop-blur">
+      <div className="mb-4 shrink-0 space-y-3 bg-bg1/95 pb-3 backdrop-blur"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-text0">Saved Songs</h2>
           <p className="text-sm text-text1">Quickly reload a paused preview.</p>
@@ -65,20 +76,50 @@ export default function SavedSongs({
           >
             Sort: {sortDirection === "asc" ? "A→Z" : "Z→A"}
           </button>
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-text1">
-            {songs.length}
-          </span>
+
         </div>
+        </div>
+        <div className="relative">
+          <input
+            type="search"
+            aria-label="Search saved songs"
+            placeholder="Search saved songs…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="w-full min-w-0 rounded-xl border border-white/15 bg-bg2 py-2 pl-3 pr-10 text-sm text-text0 outline-none focus:border-accent [&::-webkit-search-cancel-button]:appearance-none"
+          />
+          {query && <button type="button" aria-label="Clear saved songs search"
+            onClick={() => setQuery("")}
+            className="absolute inset-y-0 right-0 w-10 rounded-r-xl text-text1 hover:text-text0">×</button>}
+        </div>
+        <div role="group" aria-label="Filter saved songs by source" className="flex flex-wrap gap-2">
+          {([ ["all", "All"], ["local", "MP3"], ["youtube", "YouTube"] ] as const).map(([value, label]) => (
+            <button key={value} type="button" aria-pressed={source === value} onClick={() => setSource(value)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${source === value
+                ? "border-accent/50 bg-accent/20 text-blue-200"
+                : "border-white/10 bg-white/5 text-text1 hover:border-white/20 hover:text-text0"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <p role="status" aria-live="polite" className="text-xs text-text1">
+          {isFiltered ? `${visibleSongs.length} of ${songs.length} songs` : `${songs.length} ${songs.length === 1 ? "song" : "songs"}`}
+        </p>
       </div>
 
       {songs.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 bg-bg0/60 px-4 py-6 text-sm text-text1">
           No saved songs yet.
         </div>
+      ) : visibleSongs.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-white/10 bg-bg0/60 px-4 py-6 text-sm text-text1">
+          <p>No songs match your filters.</p>
+          <button type="button" onClick={clearFilters} className="mt-3 rounded-lg border border-accent/30 px-3 py-2 text-blue-300">Clear filters</button>
+        </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-x-visible overflow-y-auto pr-1">
           <div className="space-y-2">
-          {songs.map((song) => {
+          {visibleSongs.map((song) => {
             const isSelected = selectedVideoId === song.videoId;
 
             return (
