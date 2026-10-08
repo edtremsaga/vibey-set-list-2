@@ -50,8 +50,8 @@ export default function RecordingImport({ onImport }: Props) {
 
   return (
     <div className="mb-4 space-y-2 border-b border-white/10 pb-4">
-      <label htmlFor="recording-files" className="block text-sm font-semibold text-text0">Import recordings from your Mac</label>
-      <p id="recording-help" className="text-xs leading-5 text-text1">Choose MP3s from your Mac or a downloaded OneDrive folder. Stored only in this browser; keep your originals. Up to 100 MB per file.</p>
+      <label htmlFor="recording-files" className="block text-sm font-semibold text-text0">Import MP3 recordings</label>
+      <p id="recording-help" className="text-xs leading-5 text-text1">Choose MP3s from your computer or a downloaded OneDrive folder. Stored only in this browser; keep your originals. Up to 100 MB per file.</p>
       <input id="recording-files" type="file" accept=".mp3,audio/mpeg" multiple disabled={busy} aria-describedby="recording-help" className="block w-full text-sm text-text1 file:mr-3 file:rounded-xl file:border-0 file:bg-blue-500/20 file:px-3 file:py-2 file:text-blue-200 disabled:opacity-50" onChange={(event) => { const files = Array.from(event.target.files ?? []); event.target.value = ""; void importFiles(files); }} />
       <p role="status" className="text-xs text-text1">{message}</p>
       {errors.length > 0 && <ul className="space-y-1 text-xs text-red-300">{errors.map((error, index) => <li key={index}>{error}</li>)}</ul>}
