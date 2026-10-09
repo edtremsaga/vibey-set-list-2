@@ -3,7 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Set List App",
+  title: "Set List Driver",
   description: "Paste a YouTube URL and preview it instantly.",
 };
 

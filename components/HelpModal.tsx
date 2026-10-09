@@ -71,7 +71,7 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
       >
         <div className="mb-4 flex shrink-0 items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-text0">Music Looper Set List — Help</h2>
+            <h2 className="text-lg font-semibold text-text0">Set List Driver — Help</h2>
           </div>
           <button
             ref={closeButtonRef}

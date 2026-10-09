@@ -873,7 +873,7 @@ export default function Home() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:gap-4 xl:max-w-[1500px]">
         <header className="space-y-1.5 border-b border-white/5 pb-4">
           <h1 className="text-4xl font-semibold tracking-tight text-text0 md:text-5xl">
-            Music Looper Set List
+            Set List Driver
             <span className="ml-3 text-lg font-normal italic text-text1 md:text-2xl">
               by Vibey Craft
             </span>
