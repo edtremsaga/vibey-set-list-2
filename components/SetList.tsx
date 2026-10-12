@@ -26,6 +26,7 @@ type SetListProps = {
   selectedItemId: string | null;
   playingIndex: number | null;
   isReorderDisabled: boolean;
+  onPractice(itemId: string): void;
   onSelect(itemId: string): void;
   onRemove(itemId: string): void;
   onReorder(nextItems: SetListItem[]): void;
@@ -38,6 +39,7 @@ export default function SetList({
   selectedItemId,
   playingIndex,
   isReorderDisabled,
+  onPractice,
   onSelect,
   onRemove,
   onReorder,
@@ -158,6 +160,7 @@ export default function SetList({
                     openInfoItemId={openInfoItemId}
                     setOpenInfoItemId={setOpenInfoItemId}
                     isReorderDisabled={isReorderDisabled}
+                    onPractice={onPractice}
                     onSelect={onSelect}
                     onRemove={onRemove}
                   />
@@ -181,6 +184,7 @@ type SortableSetListRowProps = {
   openInfoItemId: string | null;
   setOpenInfoItemId: React.Dispatch<React.SetStateAction<string | null>>;
   isReorderDisabled: boolean;
+  onPractice(itemId: string): void;
   onSelect(itemId: string): void;
   onRemove(itemId: string): void;
 };
@@ -195,6 +199,7 @@ function SortableSetListRow({
   openInfoItemId,
   setOpenInfoItemId,
   isReorderDisabled,
+  onPractice,
   onSelect,
   onRemove,
 }: SortableSetListRowProps) {
@@ -223,7 +228,7 @@ function SortableSetListRow({
       tabIndex={0}
       onClick={() => onSelect(item.id)}
       onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
+        if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
           event.preventDefault();
           onSelect(item.id);
         }
@@ -313,6 +318,10 @@ function SortableSetListRow({
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
+        <button type="button" disabled={isMissing} title="Practice this song only"
+          aria-label={`Practice ${song?.title ?? "missing song"}`}
+          onClick={event => { event.stopPropagation(); onPractice(item.id); }}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-green-500/30 bg-green-500/10 text-xs text-green-300 disabled:opacity-40">▶</button>
         <button
           type="button"
           onClick={(event) => {

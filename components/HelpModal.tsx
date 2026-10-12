@@ -135,6 +135,7 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
           <section className="space-y-2">
             <h3 className="text-base font-semibold text-text0">Arrange your Set List</h3>
             <ul className="list-disc space-y-1 pl-5">
+              <li>On desktop, Saved Songs and Set List appear side by side. On smaller screens, Set List appears below Saved Songs.</li>
               <li>Drag the handle (≡) to reorder songs while playback is stopped.</li>
               <li>Click a row while idle to load a paused preview. Click a row while playing to jump to that song.</li>
               <li>× removes a row from the Set List without deleting the song from Saved Songs.</li>
@@ -153,6 +154,15 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
             </ul>
           </section>
 
+          <section className="space-y-2">
+            <h3 className="text-base font-semibold text-text0">Practice one song</h3>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Load a saved set list, then click the green practice play button (▶) at the right of a song row, next to the remove button (×), to play only that song. You can also practice songs in an unsaved draft. It stops at the end without advancing.</li>
+              <li>Check Repeat song (practice only) below the player to repeat the practice song until you stop it. This setting does not repeat songs during full set-list playback.</li>
+              <li>Practicing shows the song title and highlights its row. Stop Practice ends individual playback.</li>
+              <li>Click Play Set List when ready to stop practice and play the complete list from the top. Practice does not change your saved list or song order.</li>
+            </ul>
+          </section>
           <section className="space-y-2">
             <h3 className="text-base font-semibold text-text0">Playback</h3>
             <ul className="list-disc space-y-1 pl-5">

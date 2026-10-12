@@ -67,6 +67,10 @@ export default function Home() {
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [setListItems, setSetListItems] = useState<SetListItem[]>([]);
   const [selectedSetListItemId, setSelectedSetListItemId] = useState<string | null>(null);
+  const [practiceItemId, setPracticeItemId] = useState<string | null>(null);
+  const practiceItemRef = useRef<string | null>(null);
+  const [repeatSong, setRepeatSong] = useState(false);
+  const repeatSongRef = useRef(false);
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [countdownRemaining, setCountdownRemaining] = useState(0);
@@ -408,6 +412,8 @@ export default function Home() {
   };
 
   const stopPlayback = (clearPreviewErrors = false) => {
+    practiceItemRef.current = null;
+    setPracticeItemId(null);
     clearPlaybackTimers();
     playerControllerRef.current?.stop();
     setPlaybackState("idle");
@@ -500,10 +506,11 @@ export default function Home() {
       return;
     }
 
-    if (playbackState !== "idle") {
+    if (playbackState !== "idle" && !practiceItemRef.current) {
       stopPlayback(true);
       return;
     }
+    stopPlayback(true);
 
     const nextUnplayable = new Set<string>();
     sessionUnplayableRef.current = nextUnplayable;
@@ -575,7 +582,20 @@ export default function Home() {
     setNameDialog("new");
   };
 
+  const handlePracticeSong = (itemId: string) => {
+    const index = setListItemsRef.current.findIndex((item) => item.id === itemId);
+    const item = setListItemsRef.current[index];
+    if (!item || !songsByIdRef.current[item.videoId]) return;
+    stopPlayback(true);
+    practiceItemRef.current = itemId;
+    setPracticeItemId(itemId);
+    setSelectedSetListItemId(null);
+    setSelectedVideoId(null);
+    playIndex(index, "user");
+  };
+
   const handleSelectSetListItem = (itemId: string) => {
+    if (practiceItemRef.current) { handlePracticeSong(itemId); return; }
     const item = setListItems.find((entry) => entry.id === itemId);
     if (!item) {
       return;
@@ -602,6 +622,7 @@ export default function Home() {
   };
 
   const handleRemoveSetListItem = (itemId: string) => {
+    if (playbackState !== "idle") stopPlayback(true);
     setSetListItems((current) => {
       const nextItems = current.filter((item) => item.id !== itemId);
       saveSetListDraft(nextItems);
@@ -626,6 +647,7 @@ export default function Home() {
       return;
     }
 
+    stopPlayback(true);
     setSetListItems(list.items);
     setLoadedSetId(id);
     setIsSetListDirty(false);
@@ -658,10 +680,16 @@ export default function Home() {
       return;
     }
 
+    if (practiceItemRef.current) {
+      if (repeatSongRef.current) playIndex(currentIndex, "auto");
+      else stopPlayback(true);
+      return;
+    }
     queueNextPlayableFrom(currentIndex + 1);
   };
 
   const handlePlaybackError = () => {
+    if (practiceItemRef.current) { stopPlayback(); return; }
     if (playbackStateRef.current !== "playing" && playbackStateRef.current !== "blocked") {
       return;
     }
@@ -1118,6 +1146,10 @@ export default function Home() {
                   <span>{loadedVideoId ? "Preview ready" : "Choose a song or import a recording"}</span>
                 </div>
               </div>
+              <label className="mt-3 flex items-center gap-2 text-sm text-text1">
+                <input type="checkbox" checked={repeatSong} onChange={event => { setRepeatSong(event.target.checked); repeatSongRef.current = event.target.checked; }} />
+                Repeat song (practice only)
+              </label>
             </div>
 
             <div className="relative z-30 rounded-3xl border border-white/8 bg-bg1/80 p-3.5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-4">
@@ -1127,13 +1159,17 @@ export default function Home() {
                     type="button"
                     onClick={handlePlaySetList}
                     className={`inline-flex min-h-10 items-center justify-center rounded-2xl px-4 py-2 text-sm font-semibold text-white transition ${
-                      playbackState === "idle"
+                      (playbackState === "idle" || practiceItemId !== null)
                         ? "border border-green-500/40 bg-green-600 hover:bg-green-500"
                         : "border border-red-500/40 bg-red-600 hover:bg-red-500"
                     }`}
                   >
-                    {playbackState === "idle" ? "Play Set List" : "Stop Set List"}
+                    {playbackState === "idle" || practiceItemId !== null ? "Play Set List" : "Stop Set List"}
                   </button>
+                  {practiceItemId && <>
+                    <button type="button" onClick={() => stopPlayback(true)} className="rounded-2xl bg-red-600 px-4 py-2 text-sm font-semibold text-white">Stop Practice</button>
+                    <p role="status" className="text-sm text-green-300">Practicing: {songsById[setListItems.find(item => item.id === practiceItemId)?.videoId ?? ""]?.title}</p>
+                  </>}
                   <div ref={saveMenuRef} className="relative">
                     <button
                       type="button"
@@ -1243,6 +1279,7 @@ export default function Home() {
                   selectedItemId={selectedSetListItemId}
                   playingIndex={playingIndex}
                   isReorderDisabled={playbackState !== "idle"}
+                  onPractice={handlePracticeSong}
                   onSelect={handleSelectSetListItem}
                   onRemove={handleRemoveSetListItem}
                   onReorder={handleReorderSetListItems}
