@@ -117,6 +117,8 @@ export default function Home() {
 
   useEffect(() => {
     const songs = loadSavedSongs();
+    // Browser storage is only available after mounting; hydrate saved data once.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSavedSongs(songs);
     const lists = loadSavedSetLists();
     setSavedSetLists(sortSavedSetLists(lists));

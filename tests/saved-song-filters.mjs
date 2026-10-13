@@ -1,5 +1,5 @@
 import { chromium, expect } from '@playwright/test';
-const browser = await chromium.launch({timeout:10000});
+const browser = await chromium.launch({ channel: process.env.TEST_BROWSER_CHANNEL,timeout:10000});
 try {
   const page = await browser.newPage({viewport:{width:1280,height:900}});
   page.setDefaultTimeout(7000);

@@ -1,5 +1,5 @@
 import { chromium, expect } from '@playwright/test';
-const browser=await chromium.launch({timeout:10000});
+const browser=await chromium.launch({ channel: process.env.TEST_BROWSER_CHANNEL,timeout:10000});
 try {
  const page=await browser.newPage(); page.setDefaultTimeout(7000);
  await page.route('https://www.youtube.com/iframe_api',route=>route.fulfill({contentType:'application/javascript',body:`window.calls=[];window.YT={Player:class{constructor(el,o){this.o=o;this.state=-1;window.finish=()=>o.events.onStateChange({data:0});setTimeout(()=>o.events.onReady(),0)}cueVideoById(){}loadVideoById(id){window.calls.push(id)}playVideo(){this.state=1;this.o.events.onStateChange({data:1})}stopVideo(){this.state=-1}getPlayerState(){return this.state}destroy(){}}};window.onYouTubeIframeAPIReady();`}));

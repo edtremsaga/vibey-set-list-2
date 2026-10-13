@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 const fixture = process.env.RECORDING_FIXTURE;
 if (!fixture) throw new Error('Set RECORDING_FIXTURE to a short playable MP3.');
 const buffer = await readFile(fixture);
-const browser = await chromium.launch({ headless: true, timeout: 10000 });
+const browser = await chromium.launch({ channel: process.env.TEST_BROWSER_CHANNEL, headless: true, timeout: 10000 });
 const page = await browser.newPage();
 page.setDefaultTimeout(7000);
 page.setDefaultNavigationTimeout(10000);
