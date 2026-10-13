@@ -22,13 +22,49 @@ type YouTubeVideoItem = {
   };
 };
 
-export async function GET(request: NextRequest) {
-  const query = request.nextUrl.searchParams.get("q")?.trim() ?? "";
-  if (!query) {
-    return NextResponse.json({ items: [] });
-  }
-  const youtubeQuery = /\bofficial\b/i.test(query) ? query : `${query} official`;
+// Bounded process-local protection. A shared limiter/WAF is required across instances.
+const cache = new Map<string, { body: unknown; expires: number }>();
+const pending = new Map<string, Promise<NextResponse>>();
+let windowStart = 0;
+let searches = 0;
+const CACHE_TTL = 15 * 60 * 1000;
+const MAX_CACHE = 100;
+const MAX_SEARCHES = 20;
 
+export async function GET(request: NextRequest) {
+  const raw = request.nextUrl.searchParams.get("q") ?? "";
+  if (raw.length > 200) return NextResponse.json({ error: "Search must be 200 characters or fewer." }, { status: 400 });
+  const query = raw.trim().replace(/\s+/g, " ");
+  if (!query) return NextResponse.json({ items: [] });
+  const youtubeQuery = /\bofficial\b/i.test(query) ? query : `${query} official`;
+  const key = youtubeQuery.toLowerCase();
+  const now = Date.now();
+  for (const [id, entry] of cache) if (entry.expires <= now) cache.delete(id);
+  const cached = cache.get(key);
+  if (cached) return NextResponse.json(cached.body);
+  const existing = pending.get(key);
+  if (existing) return (await existing).clone();
+  if (now - windowStart >= 60000) { windowStart = now; searches = 0; }
+  if (searches >= MAX_SEARCHES) return NextResponse.json({ error: "Rate limit" }, {
+    status: 429, headers: { "Retry-After": String(Math.max(1, Math.ceil((windowStart + 60000 - now) / 1000))) },
+  });
+  searches += 1;
+  const task = searchYouTube(youtubeQuery);
+  pending.set(key, task);
+  try {
+    const response = await task;
+    if (response.ok) {
+      if (cache.size >= MAX_CACHE) cache.delete(cache.keys().next().value!);
+      cache.set(key, { body: await response.clone().json(), expires: Date.now() + CACHE_TTL });
+    }
+    return response;
+  } finally { pending.delete(key); }
+}
+
+async function searchYouTube(youtubeQuery: string): Promise<NextResponse> {
+  // One deadline includes both requests and reading their response bodies.
+  const signal = AbortSignal.timeout(10000);
+  try {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "Missing YouTube API key" }, { status: 500 });
@@ -44,7 +80,7 @@ export async function GET(request: NextRequest) {
 
   const searchResponse = await fetch(
     `https://www.googleapis.com/youtube/v3/search?${searchParams.toString()}`,
-    { cache: "no-store" }
+    { cache: "no-store", signal }
   );
 
   if (!searchResponse.ok) {
@@ -75,7 +111,7 @@ export async function GET(request: NextRequest) {
 
   const videosResponse = await fetch(
     `https://www.googleapis.com/youtube/v3/videos?${videosParams.toString()}`,
-    { cache: "no-store" }
+    { cache: "no-store", signal }
   );
 
   if (!videosResponse.ok) {
@@ -118,6 +154,9 @@ export async function GET(request: NextRequest) {
     .filter((item): item is NonNullable<typeof item> => item !== null);
 
   return NextResponse.json({ items });
+  } catch {
+    return NextResponse.json({ error: signal.aborted ? "Search timed out" : "Search unavailable" }, { status: signal.aborted ? 504 : 502 });
+  }
 }
 
 function formatIsoDuration(isoDuration: string): string {

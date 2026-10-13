@@ -265,6 +265,12 @@ export default function Home() {
     try {
       const response = await fetch(`/api/youtube/search?q=${encodeURIComponent(query)}`);
 
+      if (response.status === 400 || response.status === 504) {
+        setSearchResults([]);
+        setSearchMessageTone("warning");
+        setSearchMessage(response.status === 400 ? "Keep your search to 200 characters or fewer." : "YouTube took too long to respond. Try again.");
+        return;
+      }
       if (response.status === 429) {
         setSearchResults([]);
         setSearchMessageTone("warning");
