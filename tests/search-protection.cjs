@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Node CommonJS test harness. */
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const ts = require('typescript');

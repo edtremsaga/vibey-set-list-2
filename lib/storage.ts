@@ -29,116 +29,59 @@ let lastSavedSongsLoadWasCorrupt = false;
 let lastSetListLoadWasCorrupt = false;
 let lastSavedSetListsLoadWasCorrupt = false;
 
+// Remember original damaged bytes; loading never writes browser storage.
+const damaged = new Map<string, string>();
+
+function loadCollection<T>(key: string, validate: (value: unknown) => T | null, flag: () => void): T[] {
+  if (typeof window === "undefined") return [];
+  const raw = window.localStorage.getItem(key) ?? window.localStorage.getItem(key.replace("_v2", "_v1"));
+  if (raw === null) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error("Invalid collection");
+    const entries = parsed.map(validate);
+    if (entries.some(entry => entry === null)) { flag(); damaged.set(key, raw); }
+    return entries.filter((entry): entry is T => entry !== null);
+  } catch {
+    flag(); damaged.set(key, raw);
+    return [];
+  }
+}
+
+function saveCollection(key: string, value: unknown): void {
+  if (typeof window === "undefined") return;
+  const original = damaged.get(key);
+  if (original !== undefined) {
+    // Preserve each distinct original. If the backup fails, do not replace the collection.
+    const backupKey = `${key}_recovery_${crypto.randomUUID()}`;
+    window.localStorage.setItem(backupKey, original);
+    damaged.delete(key);
+  }
+  window.localStorage.setItem(key, JSON.stringify(value));
+}
+
 export function loadSavedSongs(): SavedSong[] {
   lastSavedSongsLoadWasCorrupt = false;
-
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const raw = window.localStorage.getItem(SAVED_SONGS_STORAGE_KEY) ?? window.localStorage.getItem(SAVED_SONGS_STORAGE_KEY.replace("_v2", "_v1"));
-  if (!raw) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return resetCorruptSavedSongs();
-    }
-
-    const songs = parsed.map(validateSavedSong);
-    if (songs.some((song) => song === null)) {
-      return resetCorruptSavedSongs();
-    }
-
-    return songs as SavedSong[];
-  } catch {
-    return resetCorruptSavedSongs();
-  }
+  return loadCollection(SAVED_SONGS_STORAGE_KEY, validateSavedSong, () => { lastSavedSongsLoadWasCorrupt = true; });
 }
-
-export function saveSavedSongs(songs: SavedSong[]): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(SAVED_SONGS_STORAGE_KEY, JSON.stringify(songs));
-}
-
+export function saveSavedSongs(songs: SavedSong[]): void { saveCollection(SAVED_SONGS_STORAGE_KEY, songs); }
 export function loadSetListDraft(): SetListItem[] {
   lastSetListLoadWasCorrupt = false;
-
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const raw = window.localStorage.getItem(SET_LIST_DRAFT_STORAGE_KEY) ?? window.localStorage.getItem(SET_LIST_DRAFT_STORAGE_KEY.replace("_v2", "_v1"));
-  if (!raw) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return resetCorruptSetListDraft();
-    }
-
-    const items = parsed.map(validateSetListItem);
-    if (items.some((item) => item === null)) {
-      return resetCorruptSetListDraft();
-    }
-
-    return items as SetListItem[];
-  } catch {
-    return resetCorruptSetListDraft();
-  }
+  return loadCollection(SET_LIST_DRAFT_STORAGE_KEY, validateSetListItem, () => { lastSetListLoadWasCorrupt = true; });
 }
-
-export function saveSetListDraft(items: SetListItem[]): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(SET_LIST_DRAFT_STORAGE_KEY, JSON.stringify(items));
-}
-
+export function saveSetListDraft(items: SetListItem[]): void { saveCollection(SET_LIST_DRAFT_STORAGE_KEY, items); }
 export function loadSavedSetLists(): SavedSetList[] {
   lastSavedSetListsLoadWasCorrupt = false;
-
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const raw = window.localStorage.getItem(SAVED_SET_LISTS_STORAGE_KEY) ?? window.localStorage.getItem(SAVED_SET_LISTS_STORAGE_KEY.replace("_v2", "_v1"));
-  if (!raw) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return resetCorruptSavedSetLists();
+  return loadCollection(SAVED_SET_LISTS_STORAGE_KEY, (value) => {
+    const list = validateSavedSetList(value);
+    if (list && lastSavedSetListsLoadWasCorrupt) {
+      const raw = window.localStorage.getItem(SAVED_SET_LISTS_STORAGE_KEY) ?? window.localStorage.getItem("sl_savedSetLists_v1");
+      if (raw !== null) damaged.set(SAVED_SET_LISTS_STORAGE_KEY, raw);
     }
-
-    const lists = parsed.map(validateSavedSetList);
-    if (lists.some((list) => list === null)) {
-      return resetCorruptSavedSetLists();
-    }
-
-    return lists as SavedSetList[];
-  } catch {
-    return resetCorruptSavedSetLists();
-  }
+    return list;
+  }, () => { lastSavedSetListsLoadWasCorrupt = true; });
 }
-
-export function saveSavedSetLists(lists: SavedSetList[]): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(SAVED_SET_LISTS_STORAGE_KEY, JSON.stringify(lists));
-}
+export function saveSavedSetLists(lists: SavedSetList[]): void { saveCollection(SAVED_SET_LISTS_STORAGE_KEY, lists); }
 
 export function consumeSavedSongsCorruptionFlag(): boolean {
   const wasCorrupt = lastSavedSongsLoadWasCorrupt;
@@ -156,36 +99,6 @@ export function consumeSavedSetListsCorruptionFlag(): boolean {
   const wasCorrupt = lastSavedSetListsLoadWasCorrupt;
   lastSavedSetListsLoadWasCorrupt = false;
   return wasCorrupt;
-}
-
-function resetCorruptSavedSongs(): SavedSong[] {
-  lastSavedSongsLoadWasCorrupt = true;
-
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(SAVED_SONGS_STORAGE_KEY, "[]");
-  }
-
-  return [];
-}
-
-function resetCorruptSetListDraft(): SetListItem[] {
-  lastSetListLoadWasCorrupt = true;
-
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(SET_LIST_DRAFT_STORAGE_KEY, "[]");
-  }
-
-  return [];
-}
-
-function resetCorruptSavedSetLists(): SavedSetList[] {
-  lastSavedSetListsLoadWasCorrupt = true;
-
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(SAVED_SET_LISTS_STORAGE_KEY, "[]");
-  }
-
-  return [];
 }
 
 function validateSavedSong(value: unknown): SavedSong | null {
@@ -263,13 +176,13 @@ function validateSavedSetList(value: unknown): SavedSetList | null {
 
   const items = list.items.map(validateSetListItem);
   if (items.some((item) => item === null)) {
-    return null;
+    lastSavedSetListsLoadWasCorrupt = true;
   }
 
   return {
     id: list.id,
     name: list.name,
     createdAt: list.createdAt,
-    items: items as SetListItem[],
+    items: items.filter((item): item is SetListItem => item !== null),
   };
 }

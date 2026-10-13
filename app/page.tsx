@@ -132,13 +132,13 @@ export default function Home() {
 
     if (consumeSavedSongsCorruptionFlag()) {
       setStatusTone("warning");
-      setStatusMessage("Saved Songs data was reset because it was corrupted.");
+      setStatusMessage("Some Saved Songs data could not be read. Valid songs were recovered; the original data is preserved.");
     } else if (consumeSavedSetListsCorruptionFlag()) {
       setStatusTone("warning");
-      setStatusMessage("Saved set lists data was reset because it was corrupted.");
+      setStatusMessage("Some saved set list data could not be read. Valid lists and rows were recovered; the original data is preserved.");
     } else if (consumeSetListDraftCorruptionFlag()) {
       setStatusTone("warning");
-      setStatusMessage("Set List draft data was reset because it was corrupted.");
+      setStatusMessage("Some draft data could not be read. Valid rows were recovered; the original data is preserved.");
     }
 
     if (typeof window !== "undefined") {
