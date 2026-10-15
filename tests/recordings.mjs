@@ -49,6 +49,7 @@ try {
   await upload.setInputFiles({name:'Broken.mp3',mimeType:'audio/mpeg',buffer:Buffer.from('not audio')});
   await page.getByText('Broken.mp3: This file could not be decoded as audio.').waitFor();
   console.log('CHECK: title editing');
+  await page.locator('section.song-panel').filter({has:page.getByRole('heading',{name:'Saved Songs',exact:true})}).getByRole('button',{name:'Actions for Band take',exact:true}).click();
   await page.getByRole('button',{name:'Rename Band take',exact:true}).click();
   await page.getByRole('dialog').getByLabel('Recording title').fill('Slow Moving Bird rehearsal');
   await page.getByRole('dialog').getByRole('button',{name:'Save',exact:true}).click();

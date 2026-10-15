@@ -1,5 +1,6 @@
 "use client";
 
+import SongActions from "./SongActions";
 import NameDialog from "./NameDialog";
 import type { SavedSong } from "@/lib/storage";
 import { useEffect, useState } from "react";
@@ -184,10 +185,6 @@ export default function SavedSongs({
                   </div>
                 </div>
 
-                {song.source === "local" && <button type="button" className="text-xs text-blue-300" aria-label={`Rename ${song.title}`} onClick={(event) => {
-                  event.stopPropagation();
-                  setRenaming(song);
-                }}>Edit</button>}
                 <button
                   type="button"
                   onClick={(event) => {
@@ -200,17 +197,8 @@ export default function SavedSongs({
                   +
                 </button>
 
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onDelete(song.videoId);
-                  }}
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm text-text1 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200"
-                  aria-label={`Delete ${song.title}`}
-                >
-                  ×
-                </button>
+                <SongActions song={song} onEdit={song.source === "local" ? () => setRenaming(song) : undefined}
+                  onRemove={() => onDelete(song.videoId)} />
               </div>
             );
           })}

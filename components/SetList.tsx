@@ -1,5 +1,6 @@
 "use client";
 
+import SongActions from "./SongActions";
 import type { SavedSong, SetListItem } from "@/lib/storage";
 import {
   DndContext,
@@ -233,7 +234,7 @@ function SortableSetListRow({
           onSelect(item.id);
         }
       }}
-      className={`set-list-row group flex items-center gap-2 rounded-2xl border px-2 py-2.5 text-left transition ${
+      className={`set-list-row group relative flex items-center gap-2 rounded-2xl border px-2 py-2.5 text-left transition ${
         isDragging
           ? "border-accent/50 bg-bg2 shadow-2xl"
           : isSelected
@@ -259,14 +260,10 @@ function SortableSetListRow({
       >
         ≡
       </button>
-      <span
-        className={`set-list-playing w-4 shrink-0 text-center text-xs text-green-300 ${isPlayingRow ? "opacity-100" : "opacity-0"}`}
-        aria-label={isPlayingRow ? "Currently playing" : undefined}
-        aria-hidden={!isPlayingRow}
-      >
-        ▶
+      <span className="relative w-5 shrink-0 text-center text-sm font-semibold text-text1">
+        {index + 1}
+        {isPlayingRow && <span className="absolute -bottom-2 left-0 w-full text-[8px] text-green-300" aria-label="Currently playing">▶</span>}
       </span>
-      <span className="w-5 shrink-0 text-center text-sm font-semibold text-text1">{index + 1}</span>
 
       {song ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -322,17 +319,7 @@ function SortableSetListRow({
           aria-label={`Practice ${song?.title ?? "missing song"}`}
           onClick={event => { event.stopPropagation(); onPractice(item.id); }}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-green-500/30 bg-green-500/10 text-xs text-green-300 disabled:opacity-40">▶</button>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onRemove(item.id);
-          }}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm text-text1 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200"
-          aria-label={`Remove ${song?.title ?? "missing video"} from set list`}
-        >
-          ×
-        </button>
+        <SongActions song={song} inSetList onRemove={() => onRemove(item.id)} />
       </div>
     </div>
   );

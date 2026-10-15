@@ -103,7 +103,7 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
             <ul className="list-disc space-y-1 pl-5">
               <li>Click Choose Files under Import MP3 recordings. You can select several MP3s at once, including files downloaded to your computer from OneDrive.</li>
               <li>Each file must be a playable MP3, no larger than 100 MB. Importing does not add it to the Set List automatically.</li>
-              <li>The initial title comes from the filename. Click Edit in Saved Songs to rename a recording.</li>
+              <li>The initial title comes from the filename. Open the ⋯ menu in Saved Songs and choose Edit to change its displayed title throughout the app, including set lists. This does not rename your original file or change its audio. Edit is available only for MP3 recordings.</li>
               <li>Importing the same MP3 again refreshes its browser copy without adding a duplicate or changing its saved title. It can also reconnect a missing recording to existing set lists.</li>
             </ul>
           </section>
@@ -128,7 +128,17 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
               <li>The × inside the search field clears only the search text. Clear filters, shown when nothing matches, resets both search and source filters.</li>
               <li>Search and source filters reset when you reload the page. Filtering does not change your Set List or interrupt playback.</li>
               <li>Click a saved-song row to load a paused preview; doing this during set-list playback stops the sequence.</li>
-              <li>+ adds the song to your Set List. × removes it from Saved Songs. Removing an MP3 entry currently does not reclaim its stored audio space.</li>
+              <li>+ adds the song to your Set List. Open its ⋯ menu and choose Remove from saved songs to remove the entry. Removing an MP3 entry currently does not reclaim its stored audio space.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-base font-semibold text-text0">Copy a YouTube link</h3>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>In Saved Songs or Set List, open the song’s ⋯ menu and choose Copy YouTube link. Link copied confirms it is ready to paste.</li>
+              <li>If clipboard access is unavailable, select and copy the link shown in the menu.</li>
+              <li>Copying a link does not start playback or change your list. Imported MP3s have no shareable URL, so this option appears only for YouTube songs.</li>
+              <li>Press Escape or click outside to close the menu. The +, green ▶ practice button, and drag handle remain directly available on their respective rows.</li>
             </ul>
           </section>
 
@@ -138,7 +148,7 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
               <li>On desktop, Saved Songs and Set List appear side by side. On smaller screens, Set List appears below Saved Songs.</li>
               <li>Drag the handle (≡) to reorder songs while playback is stopped.</li>
               <li>Click a row while idle to load a paused preview. Click a row while playing to jump to that song.</li>
-              <li>× removes a row from the Set List without deleting the song from Saved Songs.</li>
+              <li>Open a row’s ⋯ menu and choose Remove from set list to remove that row without deleting the song from Saved Songs.</li>
               <li>The same song can appear more than once. Songs removed from Saved Songs may appear as missing in saved set lists and cannot play until restored.</li>
             </ul>
           </section>
@@ -157,7 +167,7 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
           <section className="space-y-2">
             <h3 className="text-base font-semibold text-text0">Practice one song</h3>
             <ul className="list-disc space-y-1 pl-5">
-              <li>Load a saved set list, then click the green practice play button (▶) at the right of a song row, next to the remove button (×), to play only that song. You can also practice songs in an unsaved draft. It stops at the end without advancing.</li>
+              <li>Load a saved set list, then click the green practice play button (▶) at the right of a song row, next to the ⋯ menu, to play only that song. You can also practice songs in an unsaved draft. It stops at the end without advancing.</li>
               <li>Check Repeat song (practice only) below the player to repeat the practice song until you stop it. This setting does not repeat songs during full set-list playback.</li>
               <li>Practicing shows the song title and highlights its row. Stop Practice ends individual playback.</li>
               <li>Click Play Set List when ready to stop practice and play the complete list from the top. Practice does not change your saved list or song order.</li>

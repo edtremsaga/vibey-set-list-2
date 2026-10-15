@@ -34,6 +34,7 @@ try {
   await expect(panel.getByRole('status')).toHaveText('3 songs');
   await expect(panel.getByRole('button',{name:'All',exact:true})).toHaveAttribute('aria-pressed','true');
   await panel.getByRole('button',{name:'MP3',exact:true}).click();
+  await page.getByRole('button',{name:'Actions for Country rehearsal',exact:true}).click();
   await panel.getByRole('button',{name:'Rename Country rehearsal',exact:true}).click();
   await page.getByLabel('Recording title',{exact:true}).fill('Band practice');
   await page.getByRole('dialog').getByRole('button',{name:'Save',exact:true}).click();
