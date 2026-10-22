@@ -136,7 +136,6 @@ export default function SetList({
               {loadedSetName ?? "Draft (unsaved)"}
             </span>
           </p>
-          <p className="text-sm text-text1">Build an ordered draft from your saved songs.</p>
         </div>
         <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-text1">
           {items.length}
