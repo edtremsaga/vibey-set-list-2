@@ -3,7 +3,8 @@ const fs=require('node:fs'),ts=require('typescript'),assert=require('node:assert
 const data=new Map();let fail=false;
 global.window={localStorage:{getItem:k=>data.get(k)??null,setItem:(k,v)=>{if(fail&&k.includes('_recovery_'))throw Error('quota');data.set(k,v)}}};
 const compiled=ts.transpileModule(fs.readFileSync('lib/storage.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-const m={exports:{}};new Function('require','exports','module',compiled)(n=>n==='./recordings'?{RECORDING_ID_PATTERN:/^audio:[a-f0-9]{64}$/}:require(n),m.exports,m);const s=m.exports;
+const d={exports:{}};new Function('exports',ts.transpileModule(fs.readFileSync('lib/duration.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(d.exports);
+const m={exports:{}};new Function('require','exports','module',compiled)(n=>n==='./duration'?d.exports:n==='./recordings'?{RECORDING_ID_PATTERN:/^audio:[a-f0-9]{64}$/}:require(n),m.exports,m);const s=m.exports;
 const song={videoId:'abcdefghijk',title:'Song',thumbnailUrl:'https://example.com/a.jpg',url:'https://www.youtube.com/watch?v=abcdefghijk'};
 const row={id:'row',videoId:song.videoId};
 for(const [key,load,save,valid] of [['sl_savedSongs_v2',s.loadSavedSongs,s.saveSavedSongs,song],['sl_setListDraft_v2',s.loadSetListDraft,s.saveSetListDraft,row],['sl_savedSetLists_v2',s.loadSavedSetLists,s.saveSavedSetLists,{id:'gig',name:'Gig',createdAt:'2026-01-01',items:[row,null]}]]){

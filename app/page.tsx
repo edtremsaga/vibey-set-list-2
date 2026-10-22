@@ -1,5 +1,8 @@
 "use client";
 
+import { parseDuration, validDuration } from "@/lib/duration";
+import { readRecording, validateRecording } from "@/lib/recordings";
+import SaveChangesDialog from "@/components/SaveChangesDialog";
 import NameDialog from "@/components/NameDialog";
 import SavedSongs from "@/components/SavedSongs";
 import HelpModal from "@/components/HelpModal";
@@ -15,6 +18,8 @@ import {
   loadSavedSetLists,
   loadSavedSongs,
   loadSetListDraft,
+  loadLoadedSetId,
+  saveLoadedSetId,
   saveSavedSetLists,
   saveSavedSongs,
   saveSetListDraft,
@@ -62,6 +67,7 @@ export default function Home() {
   const [savedSetLists, setSavedSetLists] = useState<SavedSetList[]>([]);
   const [loadedSetId, setLoadedSetId] = useState<string | null>(null);
   const [isSetListDirty, setIsSetListDirty] = useState(false);
+  const [confirmSaveId, setConfirmSaveId] = useState<string | null>(null);
   const [nameDialog, setNameDialog] = useState<"save" | "new" | null>(null);
   const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
@@ -124,11 +130,12 @@ export default function Home() {
     setSavedSetLists(sortSavedSetLists(lists));
     const draftItems = loadSetListDraft();
     setSetListItems(draftItems);
-    if (draftItems.length === 0) {
-      // Fresh blank set list context: no loaded identity + empty working set + clean state.
-      setLoadedSetId(null);
-      setIsSetListDirty(false);
-    }
+    const restoredId = loadLoadedSetId();
+    const restoredList = lists.find(list => list.id === restoredId);
+    setLoadedSetId(restoredList?.id ?? null);
+    setIsSetListDirty(restoredList
+      ? JSON.stringify(draftItems) !== JSON.stringify(restoredList.items)
+      : draftItems.length > 0);
 
     if (consumeSavedSongsCorruptionFlag()) {
       setStatusTone("warning");
@@ -164,6 +171,43 @@ export default function Home() {
       Object.fromEntries(savedSongs.map((song) => [song.videoId, song])),
     [savedSongs]
   );
+
+  const durationAttempts = useRef(new Set<string>());
+  useEffect(() => {
+    const missing = savedSongs.filter(song => !validDuration(song.durationSeconds) && !durationAttempts.current.has(song.videoId));
+    if (!missing.length) return;
+    missing.forEach(song => durationAttempts.current.add(song.videoId));
+    void (async () => {
+      const durations: Record<string, number> = {};
+      // Read metadata sequentially to avoid loading many MP3 blobs at once.
+      for (const song of missing.filter(song => song.source === "local")) {
+        try {
+          const blob = await readRecording(song.videoId);
+          if (blob) durations[song.videoId] = await validateRecording(new File([blob], "recording.mp3", { type: "audio/mpeg" }));
+        } catch { /* Unavailable recordings remain explicitly unknown. */ }
+      }
+      const youtube = missing.filter(song => song.source !== "local");
+      for (let i = 0; i < youtube.length; i += 50) {
+        try {
+          const response = await fetch(`/api/youtube/durations?ids=${youtube.slice(i, i + 50).map(song => song.videoId).join(",")}`);
+          if (response.ok) {
+            const data = await response.json() as { durations?: Record<string, unknown> };
+            for (const song of youtube.slice(i, i + 50)) {
+              const duration = data.durations?.[song.videoId];
+              if (validDuration(duration)) durations[song.videoId] = duration;
+            }
+          }
+        } catch { /* Retry on the next page visit; never interrupt playback. */ }
+      }
+      if (!Object.keys(durations).length) return;
+      setSavedSongs(current => {
+        const next = current.map(song => !validDuration(song.durationSeconds) && durations[song.videoId]
+          ? { ...song, durationSeconds: durations[song.videoId] } : song);
+        try { saveSavedSongs(next); } catch { /* Still display known time during this visit. */ }
+        return next;
+      });
+    })();
+  }, [savedSongs]);
 
   const displaySavedSongs = useMemo(() => {
     const sorted = [...savedSongs].sort((a, b) =>
@@ -372,6 +416,7 @@ export default function Home() {
         {
           videoId: result.videoId,
           title: result.title,
+          durationSeconds: parseDuration(result.duration),
           thumbnailUrl: result.thumbnailUrl,
           url: canonicalUrl,
         },
@@ -538,6 +583,7 @@ export default function Home() {
     const nextLists = sortSavedSetLists([nextList, ...savedSetLists]);
     saveSavedSetLists(nextLists);
     setSavedSetLists(nextLists);
+    saveLoadedSetId(nextList.id);
     setLoadedSetId(nextList.id);
     setIsSetListDirty(false);
     return nextList;
@@ -553,31 +599,28 @@ export default function Home() {
     if (loadedSetId) {
       const existingLoaded = savedSetLists.find((list) => list.id === loadedSetId);
       if (existingLoaded) {
-        const now = new Date().toISOString();
-        const nextLists = sortSavedSetLists(
-          savedSetLists.map((list) =>
-            list.id === loadedSetId
-              ? {
-                  ...list,
-                  createdAt: now,
-                  items: setListItems,
-                }
-              : list
-          )
-        );
-
-        setSavedSetLists(nextLists);
-        setLoadedSetId(loadedSetId);
-        setIsSetListDirty(false);
-        saveSavedSetLists(nextLists);
-        setStatusTone("success");
-        setStatusMessage("Saved.");
+        setConfirmSaveId(existingLoaded.id);
         return;
       }
+      saveLoadedSetId(null);
       setLoadedSetId(null);
     }
 
     setNameDialog("save");
+  };
+
+  const confirmSaveSetList = () => {
+    const existing = savedSetLists.find(list => list.id === confirmSaveId);
+    if (!existing || existing.id !== loadedSetId) throw new Error("Loaded list changed");
+    const nextLists = sortSavedSetLists(savedSetLists.map(list => list.id === existing.id
+      ? { ...list, createdAt: new Date().toISOString(), items: setListItems } : list));
+    // Only report success after browser storage accepts the update.
+    saveSavedSetLists(nextLists);
+    setSavedSetLists(nextLists);
+    setIsSetListDirty(false);
+    setConfirmSaveId(null);
+    setStatusTone("success");
+    setStatusMessage(`Saved '${existing.name}'.`);
   };
 
   const handleSaveAsNewSetList = () => {
@@ -657,6 +700,7 @@ export default function Home() {
 
     stopPlayback(true);
     setSetListItems(list.items);
+    saveLoadedSetId(id);
     setLoadedSetId(id);
     setIsSetListDirty(false);
     saveSetListDraft(list.items);
@@ -672,6 +716,7 @@ export default function Home() {
     saveSavedSetLists(nextLists);
 
     if (loadedSetId === id) {
+      saveLoadedSetId(null);
       setLoadedSetId(null);
       setIsSetListDirty(false);
     }
@@ -899,6 +944,8 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[linear-gradient(to_bottom,#0B0D12,#101522)] px-6 py-8 text-text0 md:px-10 lg:px-12 lg:py-6">
+      {confirmSaveId && <SaveChangesDialog name={savedSetLists.find(list => list.id === confirmSaveId)?.name ?? "saved set list"}
+        onCancel={() => setConfirmSaveId(null)} onSave={confirmSaveSetList} />}
       {nameDialog && <NameDialog title={nameDialog === "new" ? "Save as new set list" : "Save set list"} label="Set list name"
         onCancel={() => setNameDialog(null)} onSave={(name) => {
           const created = saveAsNewSetList(name);

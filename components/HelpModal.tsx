@@ -146,6 +146,7 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
             <h3 className="text-base font-semibold text-text0">Arrange your Set List</h3>
             <ul className="list-disc space-y-1 pl-5">
               <li>On desktop, Saved Songs and Set List appear side by side. On smaller screens, Set List appears below Saved Songs.</li>
+              <li>Each row shows its song duration. Total time at the top sums the songs, counting repeats and excluding pauses, ads, and buffering. If any durations are unavailable, Known time shows the partial total and the number unknown. Durations are saved with songs; the total updates when the list changes.</li>
               <li>Drag the handle (≡) to reorder songs while playback is stopped.</li>
               <li>Click a row while idle to load a paused preview. Click a row while playing to jump to that song.</li>
               <li>Open a row’s ⋯ menu and choose Remove from set list to remove that row without deleting the song from Saved Songs.</li>
@@ -157,10 +158,10 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
             <h3 className="text-base font-semibold text-text0">Save and reload set lists</h3>
             <ul className="list-disc space-y-1 pl-5">
               <li>Open Save Set List and choose Save Set List. For a new draft, enter a name and click Save.</li>
-              <li>When a saved set list is loaded, Save Set List updates that list. Choose Save As New Set List to save a separate named copy.</li>
+              <li>When a saved set list is loaded, Save Set List asks you to confirm Save changes to that list; its name stays the same. Choose Save As New Set List to save a separate named copy.</li>
               <li>Open Saved Set Lists and click Load beside a list to replace the current draft with that saved list.</li>
               <li>Unsaved changes means the current draft differs from the loaded saved list. Save it to update that list.</li>
-              <li>The current draft is kept between page reloads. Use named saved lists to keep different gig or practice arrangements.</li>
+              <li>The current draft and its loaded saved-list identity are kept between page reloads. Drafts restored from older versions may need you to load the named list again before editing it. Use named saved lists to keep different gig or practice arrangements.</li>
             </ul>
           </section>
 

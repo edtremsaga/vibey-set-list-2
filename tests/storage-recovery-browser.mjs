@@ -12,7 +12,7 @@ localStorage.setItem('sl_savedSetLists_v2',JSON.stringify([{id:'gig',name:'Recov
 await p.reload();await expect(p.getByRole('button',{name:'Add Recovered Song to set list',exact:true})).toBeVisible();
 await p.getByRole('button',{name:'Saved Set Lists (1)',exact:true}).click();await p.getByRole('button',{name:'Load',exact:true}).click();
 await expect(p.locator('.set-list-row')).toHaveCount(1);
-await p.getByRole('button',{name:'Save Set List',exact:true}).click();await p.getByRole('button',{name:'Save',exact:true}).click();
+await p.getByRole('button',{name:'Save Set List',exact:true}).click();await p.getByRole('button',{name:'Save',exact:true}).click();await p.getByRole('button',{name:'Save changes',exact:true}).click();
 const originals=await p.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('sl_savedSetLists_v2_recovery_')).map(k=>localStorage.getItem(k)));
 if(!originals.some(raw=>JSON.parse(raw).length===2&&JSON.parse(raw)[0].items.length===2))throw Error('Original not preserved');
 await p.reload();await expect(p.locator('.set-list-row')).toHaveCount(1);await expect(p.getByRole('button',{name:'Add Recovered Song to set list',exact:true})).toBeVisible();

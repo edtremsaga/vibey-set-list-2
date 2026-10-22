@@ -46,21 +46,22 @@ export async function recordingId(file: File): Promise<string> {
   return "audio:" + Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export async function validateRecording(file: File): Promise<void> {
+export async function validateRecording(file: File): Promise<number> {
   if (!/\.mp3$/i.test(file.name)) throw new Error("Choose an MP3 file.");
   if (!file.size) throw new Error("This file is empty.");
   if (file.size > MAX_RECORDING_BYTES) throw new Error("Maximum size is 100 MB per recording.");
   const url = URL.createObjectURL(file);
   try {
-    await new Promise<void>((resolve, reject) => {
+    return await new Promise<number>((resolve, reject) => {
       const audio = new Audio();
       const finish = (error?: Error) => {
+        const duration = audio.duration;
         clearTimeout(timer);
         audio.onloadedmetadata = null;
         audio.onerror = null;
         audio.removeAttribute("src");
         audio.load();
-        if (error) reject(error); else resolve();
+        if (error) reject(error); else resolve(duration);
       };
       const timer = setTimeout(() => finish(new Error("Could not read this MP3. Try downloading it again.")), 10000);
       audio.preload = "metadata";

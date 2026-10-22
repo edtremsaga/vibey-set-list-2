@@ -1,6 +1,8 @@
+import { validDuration } from "./duration";
 import { RECORDING_ID_PATTERN } from "./recordings";
 
 export type SavedSong = {
+  durationSeconds?: number;
   source?: "youtube" | "local";
   videoId: string;
   title: string;
@@ -65,6 +67,17 @@ export function loadSavedSongs(): SavedSong[] {
   return loadCollection(SAVED_SONGS_STORAGE_KEY, validateSavedSong, () => { lastSavedSongsLoadWasCorrupt = true; });
 }
 export function saveSavedSongs(songs: SavedSong[]): void { saveCollection(SAVED_SONGS_STORAGE_KEY, songs); }
+// Keep identity separate so existing draft arrays and recovery backups remain compatible.
+const LOADED_SET_ID_STORAGE_KEY = "sl_loadedSetId_v1";
+export function loadLoadedSetId(): string | null {
+  if (typeof window === "undefined") return null;
+  const id = window.localStorage.getItem(LOADED_SET_ID_STORAGE_KEY);
+  return id?.trim() ? id : null;
+}
+export function saveLoadedSetId(id: string | null): void {
+  if (typeof window !== "undefined") window.localStorage.setItem(LOADED_SET_ID_STORAGE_KEY, id ?? "");
+}
+
 export function loadSetListDraft(): SetListItem[] {
   lastSetListLoadWasCorrupt = false;
   return loadCollection(SET_LIST_DRAFT_STORAGE_KEY, validateSetListItem, () => { lastSetListLoadWasCorrupt = true; });
@@ -111,7 +124,7 @@ function validateSavedSong(value: unknown): SavedSong | null {
     if (typeof song.videoId !== "string" || !RECORDING_ID_PATTERN.test(song.videoId) ||
         typeof song.title !== "string" || !song.title.trim() ||
         typeof song.thumbnailUrl !== "string" || song.url !== "") return null;
-    return { source: "local", videoId: song.videoId, title: song.title, thumbnailUrl: song.thumbnailUrl, url: "" };
+    return { ...(validDuration(song.durationSeconds) ? { durationSeconds: song.durationSeconds } : {}), source: "local", videoId: song.videoId, title: song.title, thumbnailUrl: song.thumbnailUrl, url: "" };
   }
   if (song.source !== undefined && song.source !== "youtube") return null;
   if (
@@ -128,6 +141,7 @@ function validateSavedSong(value: unknown): SavedSong | null {
   }
 
   return {
+    ...(validDuration(song.durationSeconds) ? { durationSeconds: song.durationSeconds } : {}),
     videoId: song.videoId,
     title: song.title,
     thumbnailUrl: song.thumbnailUrl,

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDuration, validDuration } from "@/lib/duration";
 import SongActions from "./SongActions";
 import type { SavedSong, SetListItem } from "@/lib/storage";
 import {
@@ -45,6 +46,8 @@ export default function SetList({
   onRemove,
   onReorder,
 }: SetListProps) {
+  const unknownDurations = items.filter(item => !validDuration(songsById[item.videoId]?.durationSeconds)).length;
+  const totalSeconds = items.reduce((sum, item) => sum + (validDuration(songsById[item.videoId]?.durationSeconds) ? Math.round(songsById[item.videoId].durationSeconds!) : 0), 0);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [openInfoItemId, setOpenInfoItemId] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
@@ -123,6 +126,10 @@ export default function SetList({
       <div className="sticky top-0 z-10 mb-4 flex items-center justify-between gap-3 bg-bg1/95 pb-3 backdrop-blur">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold text-text0">Set List</h2>
+          <p aria-live="polite" className="text-sm text-text0" data-testid="set-list-duration">
+            {unknownDurations ? "Known time" : "Total time"}: {formatDuration(totalSeconds)}
+            {unknownDurations > 0 && ` · ${unknownDurations} ${unknownDurations === 1 ? "duration unknown" : "durations unknown"}`}
+          </p>
           <p className="truncate text-xs text-text1">
             Loaded:{" "}
             <span className="font-medium text-text0">
@@ -314,6 +321,9 @@ function SortableSetListRow({
         </div>
       </div>
 
+      <span className="shrink-0 text-xs tabular-nums text-text1" aria-label={`Duration: ${validDuration(song?.durationSeconds) ? formatDuration(song.durationSeconds) : "unknown"}`}>
+        {validDuration(song?.durationSeconds) ? formatDuration(song.durationSeconds) : "—:—"}
+      </span>
       <div className="flex shrink-0 items-center gap-1.5">
         <button type="button" disabled={isMissing} title="Practice this song only"
           aria-label={`Practice ${song?.title ?? "missing song"}`}

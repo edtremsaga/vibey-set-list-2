@@ -24,11 +24,11 @@ export default function RecordingImport({ onImport }: Props) {
       for (const [index, file] of files.entries()) {
         setMessage(`Importing ${index + 1} of ${files.length}: ${file.name}`);
         try {
-          await validateRecording(file);
+          const durationSeconds = await validateRecording(file);
           const id = await recordingId(file);
           // Reimport also repairs missing browser copies without changing set-list references.
           await storeRecording(id, file);
-          const wasAdded = onImport({ source: "local", videoId: id, title: file.name.replace(/\.mp3$/i, "").trim() || file.name, thumbnailUrl: RECORDING_ART, url: "" });
+          const wasAdded = onImport({ durationSeconds, source: "local", videoId: id, title: file.name.replace(/\.mp3$/i, "").trim() || file.name, thumbnailUrl: RECORDING_ART, url: "" });
           if (wasAdded) added += 1; else existing += 1;
         } catch (error) {
           const reason = error instanceof DOMException && error.name === "QuotaExceededError"
