@@ -11,6 +11,7 @@ import SetList from "@/components/SetList";
 import type { YouTubePlayerHandle } from "@/components/YouTubePlayer";
 import SongPlayer from "@/components/SongPlayer";
 import RecordingImport from "@/components/RecordingImport";
+import BackupControls from "@/components/BackupControls";
 import {
   consumeSavedSetListsCorruptionFlag,
   consumeSetListDraftCorruptionFlag,
@@ -1272,6 +1273,7 @@ export default function Home() {
                   >
                     Help
                   </button>
+                  <BackupControls />
                   <label className="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-text1">
                     <span>Pause (sec)</span>
                     <input
